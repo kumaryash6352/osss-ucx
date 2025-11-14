@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout osss-ucx
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y automake libtool make gcc g++
+          
+          # Install UCX
+          git clone https://github.com/openucx/ucx.git
+          cd ucx
+          ./autogen.sh
+          ./configure --prefix=/usr/local
+          make -j$(nproc)
+          sudo make install
+          cd ..
+
+          # Install PMIx
+          git clone https://github.com/openpmix/openpmix.git
+          cd openpmix
+          ./autogen.sh
+          ./configure --prefix=/usr/local
+          make -j$(nproc)
+          sudo make install
+          cd ..
+
+          # Install OpenMPI
+          git clone https://github.com/open-mpi/ompi.git
+          cd ompi
+          ./autogen.sh
+          ./configure --prefix=/usr/local --with-ucx=/usr/local --with-pmix=/usr/local
+          make -j$(nproc)
+          sudo make install
+          cd ..
+
+      - name: Build osss-ucx
+        run: |
+          ./autogen.sh
+          ./configure --prefix=/usr/local --with-ucx=/usr/local --with-pmix=/usr/local
+          make -j$(nproc)
+          sudo make install
+          export PATH=/usr/local/bin:$PATH
+          export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+
+      - name: Clone shmemvv
+        run: |
+          git clone https://github.com/michael-beebe/shmemvv.git
+
+      - name: Build shmemvv
+        run: |
+          export PATH=/usr/local/bin:$PATH
+          export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+          cd shmemvv
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_C_COMPILER=$(which oshcc)
+          make -j$(nproc)
+
+      - name: Run shmemvv tests
+        run: |
+          export PATH=/usr/local/bin:$PATH
+          export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+          cd shmemvv
+          ./shmemvv.sh --enable_c --enable_c11
