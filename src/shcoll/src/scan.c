@@ -30,7 +30,7 @@
   int inscan_helper_##_name##_linear(                                          \
     _type *dest, const _type *source, int nelems, int me_as, shmem_team_t team,\
     int PE_start, int logPE_stride, int PE_size, _type *pWrk, long *pSync) {   \
-  _type * workBuffer = (_type *)calloc(nelems, sizeof(_type));                 \
+  _type * workBuffer = (_type *)shmem_calloc(nelems, sizeof(_type));           \
   if (workBuffer == NULL)                                                      \
     return 1;                                                                  \
   /* If dest and source are the same, need a buffer to store intermediate */   \
@@ -39,11 +39,13 @@
   if ( (void *) dest == (void *) source){                                      \
     result = (_type *)calloc(nelems, sizeof(_type));                           \
     if (result == NULL){                                                       \
-      free(workBuffer);                                                        \
+      shmem_free(workBuffer);                                                  \
       return 1;                                                                \
     }                                                                          \
   }                                                                            \
   else {                                                                       \
+    /* zero out dest array */                                                  \
+    memset(dest, 0, nelems * sizeof(_type));                                   \
     result = (_type *) dest;                                                   \
   }                                                                            \
                                                                                \
@@ -51,7 +53,7 @@
   /* Do insum scan */                                                          \
   for (int pe = 0; pe <= me_as; pe++){                                         \
     int src_pe = shmemc_team_translate_pe(team, pe, SHMEM_TEAM_WORLD);         \
-    shmem_get(workBuffer, source, nelems, src_pe);                             \
+    shmem_getmem(workBuffer, source, nelems * sizeof(_type), src_pe);          \
     /* add results */                                                          \
     for (int i = 0; i < nelems; i ++){                                         \
       result[i] = result[i] + workBuffer[i];                                   \
@@ -66,7 +68,7 @@
     free(result);                                                              \
   }                                                                            \
                                                                                \
-  free(workBuffer);                                                            \
+  shmem_free(workBuffer);                                                      \
   return 0;                                                                    \
 }
 
@@ -89,7 +91,7 @@ SHMEM_REDUCE_ARITH_TYPE_TABLE(DECLARE_INSCAN_HELPER)
   int exscan_helper_##_name##_linear(                                          \
     _type *dest, const _type *source, int nelems, int me_as, shmem_team_t team,\
     int PE_start, int logPE_stride, int PE_size, _type *pWrk, long *pSync) {   \
-  _type * workBuffer = (_type *)calloc(nelems, sizeof(_type));                 \
+  _type * workBuffer = (_type *)shmem_calloc(nelems, sizeof(_type));           \
   if (workBuffer == NULL)                                                      \
     return 1;                                                                  \
   /* If dest and source are the same, need a buffer to store intermediate */   \
@@ -98,19 +100,21 @@ SHMEM_REDUCE_ARITH_TYPE_TABLE(DECLARE_INSCAN_HELPER)
   if ( (void *) dest == (void *) source){                                      \
     result = (_type *)calloc(nelems, sizeof(_type));                           \
     if (result == NULL){                                                       \
-      free(workBuffer);                                                        \
+      shmem_free(workBuffer);                                                  \
       return 1;                                                                \
     }                                                                          \
   }                                                                            \
   else {                                                                       \
+    /* zero out dest array */                                                  \
+    memset(dest, 0, nelems * sizeof(_type));                                   \
     result = (_type *) dest;                                                   \
   }                                                                            \
                                                                                \
   shcoll_barrier_linear(PE_start, logPE_stride, PE_size, pSync);               \
   /* Do insum scan */                                                          \
-  for (int pe = 0; pe <= me_as - 1; pe++){                                     \
+  for (int pe = 0; pe <= me_as; pe++){                                         \
     int src_pe = shmemc_team_translate_pe(team, pe, SHMEM_TEAM_WORLD);         \
-    shmem_get(workBuffer, source, nelems, src_pe);                             \
+    shmem_getmem(workBuffer, source, nelems * sizeof(_type), src_pe);          \
     /* add results */                                                          \
     for (int i = 0; i < nelems; i ++){                                         \
       result[i] = result[i] + workBuffer[i];                                   \
@@ -125,7 +129,7 @@ SHMEM_REDUCE_ARITH_TYPE_TABLE(DECLARE_INSCAN_HELPER)
     free(result);                                                              \
   }                                                                            \
                                                                                \
-  free(workBuffer);                                                            \
+  shmem_free(workBuffer);                                                      \
   return 0;                                                                    \
 }
 
