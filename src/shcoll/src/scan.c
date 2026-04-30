@@ -53,10 +53,10 @@
   shcoll_barrier_linear(PE_start, logPE_stride, PE_size, pSync);               \
   /* Do insum scan */                                                          \
   for (int pe = 0; pe <= me_as; pe++){                                         \
-    int src_pe = shmemc_team_pe_to_world(team, pe);         \
+    int src_pe = shmemc_team_pe_to_world(team, pe);                            \
     shmem_getmem(workBuffer, source, nelems * sizeof(_type), src_pe);          \
     /* add results */                                                          \
-    for (int i = 0; i < nelems; i ++){                                         \
+    for (size_t i = 0; i < nelems; i ++){                                      \
       result[i] = result[i] + workBuffer[i];                                   \
     }                                                                          \
   }                                                                            \
@@ -102,7 +102,7 @@
   /* wait on results and take sum (except for first PE) */                     \
   if (me_as != 0){                                                             \
     shmem_wait_until(received, 1, SHMEM_CMP_EQ);                               \
-    for (int i = 0; i < nelems; i ++)                                          \
+    for (size_t i = 0; i < nelems; i ++)                                       \
       dest[i] = workBuffer[i] + source[i];                                     \
   }                                                                            \
   if (me_as != PE_size - 1){                                                   \
@@ -153,6 +153,46 @@
   return 0;                                                                    \
 }
 
+#define INSCAN_HELPER_RECURSIVE_DOUBLING(_name, _type)                                \
+  int inscan_helper_##_name##_linear(                                          \
+    _type *dest, const _type *source, int nelems, int me_as, shmem_team_t team,\
+    int PE_start, int logPE_stride, int PE_size, _type *pWrk, long *pSync) {   \
+  _type * partialResBuf = (_type *) shmem_malloc(nelems * sizeof(_type));     \
+  if (partialResBuf == NULL)                                                   \
+    return 1;                                                                  \
+  _type * recvBuf = (_type *) shmem_malloc(nelems * sizeof(_type));           \
+  if (recvBuf == NULL){                                                        \
+    shmem_free(partialResBuf);                                                 \
+    return 1;                                                                  \
+  }                                                                            \
+  memcpy(partialResBuf, source, nelems * sizeof(_type)); \
+  memcpy(dest, source, nelems * sizeof(_type)); \
+  shcoll_barrier_binomial_tree(PE_start, logPE_stride, PE_size, pSync);        \
+                                                                               \
+  for (int stride = 1; stride < PE_size; stride <<= 1){                        \
+    int target = stride ^ me_as;                                               \
+    if (target < PE_size){                                                     \
+      int world_target = shmemc_team_pe_to_world(team, target);                \
+      shmem_getmem(recvBuf, partialResBuf, nelems * sizeof(_type),             \
+          world_target);                                                       \
+      shcoll_barrier_binomial_tree(PE_start, logPE_stride, PE_size, pSync);    \
+      if (me_as > target){                                                     \
+        for (size_t i = 0; i < nelems; i ++)                                   \
+          partialResBuf[i] = partialResBuf[i] + recvBuf[i];                    \
+        for (size_t i = 0; i < nelems; i ++)                                   \
+          dest[i] = dest[i] + recvBuf[i];                    \
+      } else {                                                                 \
+        for (size_t i = 0; i < nelems; i ++)                                   \
+          partialResBuf[i] = partialResBuf[i] + recvBuf[i];                    \
+      }                                                                        \
+    }                                                                          \
+    shcoll_barrier_binomial_tree(PE_start, logPE_stride, PE_size, pSync);      \
+  }                                                                            \
+  shmem_free(partialResBuf);                                                   \
+  shmem_free(recvBuf);                                                         \
+  return 0;                                                                    \
+}
+
 #define DECLARE_INSCAN_HELPER(_type, _typename)                               \
   INSCAN_HELPER_LINEAR(_typename, _type)
 
@@ -194,7 +234,7 @@ SHMEM_REDUCE_ARITH_TYPE_TABLE(DECLARE_INSCAN_HELPER)
   shcoll_barrier_linear(PE_start, logPE_stride, PE_size, pSync);               \
   /* Do insum scan */                                                          \
   for (int pe = 0; pe <= me_as - 1; pe++){                                     \
-    int src_pe = shmemc_team_pe_to_world(team, pe);         \
+    int src_pe = shmemc_team_pe_to_world(team, pe);                            \
     shmem_getmem(workBuffer, source, nelems * sizeof(_type), src_pe);          \
     /* add results */                                                          \
     for (int i = 0; i < nelems; i ++){                                         \
