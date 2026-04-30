@@ -446,6 +446,21 @@ int shmemc_team_translate_pe(shmemc_team_h sh, int src_pe, shmemc_team_h dh) {
   return kh_val(dh->rev, k);
 }
 
+int shmemc_team_pe_to_world(shmemc_team_h sh, int src_pe) {
+  khiter_t k;
+  int wpe;
+
+  /* can we find the source PE? */
+  k = kh_get(map, sh->fwd, src_pe);
+  if (k == kh_end(sh->fwd)) {
+    return -1;
+    /* NOT REACHED */
+  }
+
+  /* world equiv PE */
+  return kh_val(sh->fwd, k);
+}
+
 /**
  * @brief Check if PE is member of strided team
  *
