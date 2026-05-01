@@ -291,29 +291,21 @@
  * User by:
  * - shmem_sum_inscan()
  * - shmem_sum_exscan()
+ * NOTE: Only canonical C types are included below to avoid _Generic
+ * duplicate/compatible type errors.
  */
-#define C11_SHMEM_SCAN_ARITH_TYPE_TABLE(X)                                         \
+#define C11_SHMEM_SCAN_ARITH_TYPE_TABLE(X)                                     \
   X(char, char)                                                                \
   X(signed char, schar)                                                        \
   X(short, short)                                                              \
   X(int, int)                                                                  \
   X(long, long)                                                                \
   X(long long, longlong)                                                       \
-  X(ptrdiff_t, ptrdiff)                                                        \
   X(unsigned char, uchar)                                                      \
   X(unsigned short, ushort)                                                    \
   X(unsigned int, uint)                                                        \
   X(unsigned long, ulong)                                                      \
   X(unsigned long long, ulonglong)                                             \
-  X(int8_t, int8)                                                              \
-  X(int16_t, int16)                                                            \
-  X(int32_t, int32)                                                            \
-  X(int64_t, int64)                                                            \
-  X(uint8_t, uint8)                                                            \
-  X(uint16_t, uint16)                                                          \
-  X(uint32_t, uint32)                                                          \
-  X(uint64_t, uint64)                                                          \
-  X(size_t, size)                                                              \
   X(float, float)                                                              \
   X(double, double)                                                            \
   X(long double, longdouble)                                                   \

@@ -36,23 +36,23 @@
   int shcoll_##_typename##_sum_exscan_##_algo(                                  \
       shmem_team_t team, _type *dest, const _type *source, size_t nelems);
 
-#define DECLARE_SUM_INSCAN(_type, _typename)                               \
-  SHCOLL_SUM_INSCAN_DECLARE(_typename, _type, linear) \
-  SHCOLL_SUM_INSCAN_DECLARE(_typename, _type, ring) \
-  SHCOLL_SUM_INSCAN_DECLARE(_typename, _type, logarithmic) \
-  SHCOLL_SUM_INSCAN_DECLARE(_typename, _type, recursive_doubling)
+#define DECLARE_SUM_INSCAN(_type, _typename)                                    \
+  SHCOLL_SUM_INSCAN_DECLARE(_typename, _type, linear)                           \
+  SHCOLL_SUM_INSCAN_DECLARE(_typename, _type, ring)                             \
+  SHCOLL_SUM_INSCAN_DECLARE(_typename, _type, logarithmic)                      \
+  SHCOLL_SUM_INSCAN_DECLARE(_typename, _type, rec_dbl)
 
-SHMEM_REDUCE_ARITH_TYPE_TABLE(DECLARE_SUM_INSCAN)
+SHMEM_SCAN_ARITH_TYPE_TABLE(DECLARE_SUM_INSCAN)
 #undef DECLARE_SUM_INSCAN
 
-#define DECLARE_SUM_EXSCAN(_type, _typename)                               \
-  SHCOLL_SUM_EXSCAN_DECLARE(_typename, _type, linear) \
-  SHCOLL_SUM_EXSCAN_DECLARE(_typename, _type, ring) \
-  SHCOLL_SUM_EXSCAN_DECLARE(_typename, _type, logarithmic) \
-  SHCOLL_SUM_EXSCAN_DECLARE(_typename, _type, recursive_doubling)
+#define DECLARE_SUM_EXSCAN(_type, _typename)                                    \
+  SHCOLL_SUM_EXSCAN_DECLARE(_typename, _type, linear)                           \
+  SHCOLL_SUM_EXSCAN_DECLARE(_typename, _type, ring)                             \
+  SHCOLL_SUM_EXSCAN_DECLARE(_typename, _type, logarithmic)                      \
+  SHCOLL_SUM_EXSCAN_DECLARE(_typename, _type, rec_dbl)
 
 
-SHMEM_REDUCE_ARITH_TYPE_TABLE(DECLARE_SUM_EXSCAN)
+SHMEM_SCAN_ARITH_TYPE_TABLE(DECLARE_SUM_EXSCAN)
 #undef DECLARE_SUM_EXSCAN
 
 #endif /* ! _SHCOLL_SCAN_H */

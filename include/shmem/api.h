@@ -3327,7 +3327,7 @@ SHMEM_TO_ALL_MINMAX_TYPE_TABLE(DECL_MIN_TO_ALL)
  * @return Zero on success, non-zero otherwise
  */
 #define API_INSCAN_TYPE(_type, _typename)                                   \
-  int shmem_##_typename##_sum_inscan(shmem_team_t team, _type *dest,            \
+  int shmem_##_typename##_sum_inscan(shmem_team_t team, _type *dest,        \
                                       const _type *source, size_t nelems);
 
 #define DECL_INSCAN(_type, _typename)                                       \
@@ -3355,7 +3355,7 @@ SHMEM_SCAN_ARITH_TYPE_TABLE(DECL_INSCAN)
  * @return Zero on success, non-zero otherwise
  */
 #define API_EXSCAN_TYPE(_type, _typename)                                   \
-  int shmem_##_typename##_sum_exscan(shmem_team_t team, _type *dest,            \
+  int shmem_##_typename##_sum_exscan(shmem_team_t team, _type *dest,        \
                                       const _type *source, size_t nelems);
 
 #define DECL_EXSCAN(_type, _typename)                                       \

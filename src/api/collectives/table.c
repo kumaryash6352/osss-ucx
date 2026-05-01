@@ -555,10 +555,10 @@ static typed_op_t prod_reduce_tab[] = {
   TYPED_SUM_INSCAN_REG(linear, _typename), \
   TYPED_SUM_INSCAN_REG(ring, _typename), \
   TYPED_SUM_INSCAN_REG(logarithmic, _typename), \
-  TYPED_SUM_INSCAN_REG(recursive_doubling, _typename),
+  TYPED_SUM_INSCAN_REG(rec_dbl, _typename),
 
 static typed_op_t sum_inscan_tab[] = {
-    SHMEM_REDUCE_ARITH_TYPE_TABLE(SUM_INSCAN_REG) TYPED_LAST};
+    SHMEM_SCAN_ARITH_TYPE_TABLE(SUM_INSCAN_REG) TYPED_LAST};
 #undef SUM_INSCAN_REG
 
 /**
@@ -568,10 +568,10 @@ static typed_op_t sum_inscan_tab[] = {
   TYPED_SUM_EXSCAN_REG(linear, _typename), \
   TYPED_SUM_EXSCAN_REG(ring, _typename), \
   TYPED_SUM_EXSCAN_REG(logarithmic, _typename), \
-  TYPED_SUM_EXSCAN_REG(recursive_doubling, _typename),
+  TYPED_SUM_EXSCAN_REG(rec_dbl, _typename),
 
 static typed_op_t sum_exscan_tab[] = {
-    SHMEM_REDUCE_ARITH_TYPE_TABLE(SUM_EXSCAN_REG) TYPED_LAST};
+    SHMEM_SCAN_ARITH_TYPE_TABLE(SUM_EXSCAN_REG) TYPED_LAST};
 #undef SUM_EXSCAN_REG
 
 /**
