@@ -203,14 +203,7 @@ AC_CONFIG_FILES([
 	src/osh_info/Makefile
         ])
 
-CFLAGS="-g -O0" 
-AC_SUBST([CFLAGS])
-CXXFLAGS="-g -O0" 
-AC_SUBST([CXXFLAGS])
-
 AC_OUTPUT
-
-
 
 #
 # Courtesy info

@@ -3309,7 +3309,7 @@ SHMEM_TO_ALL_MINMAX_TYPE_TABLE(DECL_MIN_TO_ALL)
 
 ////////////////////////////////////////////////////////////////////////////////
 /*
- * @brief Performs an inclusiv sum scan operation
+ * @brief Performs an inclusive sum scan operation
  *
  * @section Synopsis
  *

@@ -28,9 +28,9 @@
  * @param _type Data type to operate on
  */
 #define SUM_INSCAN_HELPER_LINEAR(_name, _type)                                 \
-  int sum_inscan_helper_##_name##_linear(                                      \
+  static inline int sum_inscan_helper_##_name##_linear(                        \
     _type *dest, const _type *source, int nelems, int me_as, shmem_team_t team,\
-    int PE_start, int logPE_stride, int PE_size, _type *pWrk, long *pSync) {   \
+    int PE_start, int logPE_stride, int PE_size, long *pSync) {                \
   _type * workBuffer = (_type *)shmem_calloc(nelems, sizeof(_type));           \
   if (workBuffer == NULL)                                                      \
     return 1;                                                                  \
@@ -73,11 +73,24 @@
   return 0;                                                                    \
 }
 
-/* Implement the ring algorithm here */                                        
+/*
+   @brief Helper macro to define ring sum_inscan operations
+ *
+ * Implements a ring sum_inscan algorithm where each PE waits for the partial
+ * prefix sum from its predecessor via a signal, adds its own source values,
+ * and forwards the result to its successor using shmem_put8_signal.  PE 0
+ * seeds the chain with its own values.  Two binomial-tree barriers bookend
+ * the data-exchange phase: the first ensures all source data is committed
+ * before the chain starts; the second ensures all destinations are stable
+ * before returning.
+ *
+ * @param _name Typename of sum_inscan operation
+ * @param _type Data type to operate on
+ */
 #define SUM_INSCAN_HELPER_RING(_name, _type)                                   \
-  int sum_inscan_helper_##_name##_ring(                                        \
+  static inline int sum_inscan_helper_##_name##_ring(                          \
     _type *dest, const _type *source, int nelems, int me_as, shmem_team_t team,\
-    int PE_start, int logPE_stride, int PE_size, _type *pWrk, long *pSync) {   \
+    int PE_start, int logPE_stride, int PE_size, long *pSync) {                \
   _type * workBuffer;                                                          \
   if ((void *) dest == (void *) source){                                       \
     workBuffer = (_type *)shmem_malloc(nelems * sizeof(_type));                \
@@ -120,11 +133,23 @@
   return 0;                                                                    \
 }
 
-/* based off of Hillis and Steele's algorithm  */
+/*
+   @brief Helper macro to define logarithmic (Hillis-Steele) sum_inscan operations
+ *
+ * Implements the Hillis-Steele parallel prefix scan.  In each of log2(PE_size)
+ * rounds (strides 1, 2, 4, ...), every PE whose rank is at least stride fetches
+ * the current dest from the PE at rank (me - stride) and accumulates it into
+ * its own dest.  Two barriers per round prevent read-after-write races across
+ * PEs: one after the fetch and one after the update.  After all rounds, PE i
+ * holds the inclusive sum of elements 0..i.
+ *
+ * @param _name Typename of sum_inscan operation
+ * @param _type Data type to operate on
+ */
 #define SUM_INSCAN_HELPER_LOGARITHMIC(_name, _type)                            \
-  int sum_inscan_helper_##_name##_logarithmic(                                 \
+  static inline int sum_inscan_helper_##_name##_logarithmic(                   \
     _type *dest, const _type *source, int nelems, int me_as, shmem_team_t team,\
-    int PE_start, int logPE_stride, int PE_size, _type *pWrk, long *pSync) {   \
+    int PE_start, int logPE_stride, int PE_size, long *pSync) {                \
   _type * workBuffer = (_type *)shmem_malloc(nelems * sizeof(_type));          \
   if (workBuffer == NULL)                                                      \
     return 1;                                                                  \
@@ -153,10 +178,26 @@
   return 0;                                                                    \
 }
 
+/*
+   @brief Helper macro to define recursive-doubling sum_inscan operations
+ *
+ * Implements an inclusive prefix scan via recursive doubling.  Two symmetric
+ * buffers are maintained: partialResBuf (the group-reduction partial sum for
+ * this PE's subtree) and dest (the running inclusive prefix sum).  In each of
+ * log2(PE_size) rounds, each PE XOR-pairs with a partner at distance stride
+ * and fetches that partner's partialResBuf.  The higher-ranked PE in each pair
+ * accumulates the received data into both partialResBuf and dest; the lower-
+ * ranked PE accumulates only into partialResBuf.  Two barriers per round
+ * (before and after the accumulate) prevent races.  After all rounds, dest
+ * holds the inclusive prefix sum for each PE.
+ *
+ * @param _name Typename of sum_inscan operation
+ * @param _type Data type to operate on
+ */
 #define SUM_INSCAN_HELPER_RECURSIVE_DOUBLING(_name, _type)                     \
-  int sum_inscan_helper_##_name##_rec_dbl(                                     \
+  static inline int sum_inscan_helper_##_name##_rec_dbl(                       \
     _type *dest, const _type *source, int nelems, int me_as, shmem_team_t team,\
-    int PE_start, int logPE_stride, int PE_size, _type *pWrk, long *pSync) {   \
+    int PE_start, int logPE_stride, int PE_size, long *pSync) {                \
   _type * partialResBuf = (_type *) shmem_malloc(nelems * sizeof(_type));      \
   if (partialResBuf == NULL)                                                   \
     return 1;                                                                  \
@@ -193,6 +234,17 @@
   return 0;                                                                    \
 }
 
+/*
+   @brief Instantiates all sum_inscan algorithm variants for a given type
+ *
+ * Expands all four sum_inscan helper macros (linear, ring, logarithmic, and
+ * recursive doubling) for the given (_type, _typename) pair.  Intended to be
+ * passed as the callback to SHMEM_SCAN_ARITH_TYPE_TABLE so that one
+ * instantiation covers every supported arithmetic type.
+ *
+ * @param _type    C type of the scan elements (e.g. int, float)
+ * @param _typename Stringified type name used in function-name mangling
+ */
 #define DECLARE_SUM_INSCAN_HELPER(_type, _typename)                            \
   SUM_INSCAN_HELPER_LINEAR(_typename, _type)                                   \
   SUM_INSCAN_HELPER_RING(_typename, _type)                                     \
@@ -212,9 +264,9 @@ SHMEM_SCAN_ARITH_TYPE_TABLE(DECLARE_SUM_INSCAN_HELPER)
  * @param _type Data type to operate on
  */
 #define SUM_EXSCAN_HELPER_LINEAR(_name, _type)                                 \
-  int sum_exscan_helper_##_name##_linear(                                      \
+  static inline int sum_exscan_helper_##_name##_linear(                        \
     _type *dest, const _type *source, int nelems, int me_as, shmem_team_t team,\
-    int PE_start, int logPE_stride, int PE_size, _type *pWrk, long *pSync) {   \
+    int PE_start, int logPE_stride, int PE_size, long *pSync) {                \
   _type * workBuffer = (_type *)shmem_calloc(nelems, sizeof(_type));           \
   if (workBuffer == NULL)                                                      \
     return 1;                                                                  \
@@ -257,11 +309,24 @@ SHMEM_SCAN_ARITH_TYPE_TABLE(DECLARE_SUM_INSCAN_HELPER)
   return 0;                                                                    \
 }
 
-/* Implement the ring algorithm here */                                        
+/*
+   @brief Helper macro to define ring sum_exscan operations
+ *
+ * Implements an exclusive prefix scan using the ring algorithm.  The data-
+ * exchange phase is identical to SUM_INSCAN_HELPER_RING: a signal-driven chain
+ * propagates partial sums from PE 0 to PE N-1.  After the second barrier, an
+ * additional shift phase fetches each PE's inclusive result from its
+ * predecessor (PE 0 writes zeros), converting the inclusive chain result into
+ * an exclusive prefix sum.  A third barrier ensures the shifted values are
+ * visible before the function returns.
+ *
+ * @param _name Typename of sum_exscan operation
+ * @param _type Data type to operate on
+ */
 #define SUM_EXSCAN_HELPER_RING(_name, _type)                                   \
-  int sum_exscan_helper_##_name##_ring(                                        \
+  static inline int sum_exscan_helper_##_name##_ring(                          \
     _type *dest, const _type *source, int nelems, int me_as, shmem_team_t team,\
-    int PE_start, int logPE_stride, int PE_size, _type *pWrk, long *pSync) {   \
+    int PE_start, int logPE_stride, int PE_size, long *pSync) {                \
   _type * workBuffer;                                                          \
   if ((void *) dest == (void *) source){                                       \
     workBuffer = (_type *)shmem_malloc(nelems * sizeof(_type));                \
@@ -320,10 +385,22 @@ SHMEM_SCAN_ARITH_TYPE_TABLE(DECLARE_SUM_INSCAN_HELPER)
   return (shiftBuf == NULL) ? 1 : 0;                                           \
 }
 
+/*
+   @brief Helper macro to define logarithmic (Hillis-Steele) sum_exscan operations
+ *
+ * Runs the same log2(PE_size)-round Hillis-Steele sweep as
+ * SUM_INSCAN_HELPER_LOGARITHMIC to build an inclusive prefix sum in dest, then
+ * applies a shift phase: each PE (me > 0) fetches dest from its predecessor
+ * and overwrites its own dest with that value; PE 0 zeroes its dest.  A barrier
+ * after the shift ensures the exclusive results are stable before returning.
+ *
+ * @param _name Typename of sum_exscan operation
+ * @param _type Data type to operate on
+ */
 #define SUM_EXSCAN_HELPER_LOGARITHMIC(_name, _type)                            \
-  int sum_exscan_helper_##_name##_logarithmic(                                 \
+  static inline int sum_exscan_helper_##_name##_logarithmic(                   \
     _type *dest, const _type *source, int nelems, int me_as, shmem_team_t team,\
-    int PE_start, int logPE_stride, int PE_size, _type *pWrk, long *pSync) {   \
+    int PE_start, int logPE_stride, int PE_size, long *pSync) {                \
   _type * workBuffer = (_type *)shmem_malloc(nelems * sizeof(_type));          \
   if (workBuffer == NULL)                                                      \
     return 1;                                                                  \
@@ -366,10 +443,25 @@ SHMEM_SCAN_ARITH_TYPE_TABLE(DECLARE_SUM_INSCAN_HELPER)
   return (shiftBuf == NULL) ? 1 : 0;                                           \
 }
 
+/*
+   @brief Helper macro to define recursive-doubling sum_exscan operations
+ *
+ * Produces an exclusive prefix scan using the same XOR-pairing structure as
+ * SUM_INSCAN_HELPER_RECURSIVE_DOUBLING.  partialResBuf is initialised from
+ * source and dest is zeroed.  In each round the higher-ranked PE of an XOR
+ * pair accumulates the received partial sum into both partialResBuf and dest;
+ * the lower-ranked PE accumulates only into partialResBuf.  Because dest starts
+ * at zero and is only updated by PEs that are strictly greater than their
+ * partner, dest converges to the exclusive prefix sum (the sum of all elements
+ * with rank strictly less than the calling PE) after all log2(PE_size) rounds.
+ *
+ * @param _name Typename of sum_exscan operation
+ * @param _type Data type to operate on
+ */
 #define SUM_EXSCAN_HELPER_RECURSIVE_DOUBLING(_name, _type)                     \
-  int sum_exscan_helper_##_name##_rec_dbl(                                     \
+  static inline int sum_exscan_helper_##_name##_rec_dbl(                       \
     _type *dest, const _type *source, int nelems, int me_as, shmem_team_t team,\
-    int PE_start, int logPE_stride, int PE_size, _type *pWrk, long *pSync) {   \
+    int PE_start, int logPE_stride, int PE_size, long *pSync) {                \
   _type * partialResBuf = (_type *) shmem_malloc(nelems * sizeof(_type));      \
   if (partialResBuf == NULL)                                                   \
     return 1;                                                                  \
@@ -406,6 +498,17 @@ SHMEM_SCAN_ARITH_TYPE_TABLE(DECLARE_SUM_INSCAN_HELPER)
   return 0;                                                                    \
 }
 
+/*
+   @brief Instantiates all sum_exscan algorithm variants for a given type
+ *
+ * Expands all four sum_exscan helper macros (linear, ring, logarithmic, and
+ * recursive doubling) for the given (_type, _typename) pair.  Intended to be
+ * passed as the callback to SHMEM_SCAN_ARITH_TYPE_TABLE so that one
+ * instantiation covers every supported arithmetic type.
+ *
+ * @param _type    C type of the scan elements (e.g. int, float)
+ * @param _typename Stringified type name used in function-name mangling
+ */
 #define DECLARE_SUM_EXSCAN_HELPER(_type, _typename)                            \
   SUM_EXSCAN_HELPER_LINEAR(_typename, _type)                                   \
   SUM_EXSCAN_HELPER_RING(_typename, _type)                                     \
@@ -416,7 +519,17 @@ SHMEM_SCAN_ARITH_TYPE_TABLE(DECLARE_SUM_EXSCAN_HELPER)
 #undef DECLARE_SUM_EXSCAN_HELPER
 
 /*
- * @brief Macro to define team-based sum_inscan operations
+ * @brief Macro to define a team-based sum_inscan public API entry point
+ *
+ * Generates the shcoll_<typename>_sum_inscan_<algo> function for one
+ * (_typename, _type, _algo) triple.  The generated function validates its
+ * arguments, translates the caller's team-local rank, delegates to the
+ * corresponding sum_inscan_helper, and resets the collective pSync slot
+ * before returning.
+ *
+ * @param _typename Stringified type name used in function-name mangling
+ * @param _type     C type of the scan elements
+ * @param _algo     Algorithm suffix (linear, ring, logarithmic, or rec_dbl)
  */
 #define SHCOLL_SUM_INSCAN_DEFINITION(_typename, _type, _algo)                  \
   int shcoll_##_typename##_sum_inscan_##_algo(                                 \
@@ -428,25 +541,34 @@ SHMEM_SCAN_ARITH_TYPE_TABLE(DECLARE_SUM_EXSCAN_HELPER)
     shmemc_team_h team_h = (shmemc_team_h)team;                                \
     SHMEMU_CHECK_NULL(shmemc_team_get_psync(team_h, SHMEMC_PSYNC_COLLECTIVE),  \
                      "team_h->pSyncs[COLLECTIVE]");                            \
+    SHMEMU_CHECK_BUFFER_OVERLAP(dest, source,                                  \
+                      sizeof(_type) * nelems,sizeof(_type) * nelems);          \
                                                                                \
-    _type *pWrk =                                                              \
-        shmem_malloc(SHCOLL_REDUCE_MIN_WRKDATA_SIZE * sizeof(_type));          \
     int me = shmemc_my_pe();                                                   \
     int me_as = shmemc_team_translate_pe(SHMEM_TEAM_WORLD, me, team);          \
                                                                                \
     int success = sum_inscan_helper_##_typename##_##_algo(                     \
         dest, source, nelems, me_as, team, team_h->start,                      \
         (team_h->stride > 0) ? (int)log2((double)team_h->stride) : 0,          \
-        team_h->nranks, pWrk,                                                  \
+        team_h->nranks,                                                        \
         shmemc_team_get_psync(team_h, SHMEMC_PSYNC_COLLECTIVE));               \
                                                                                \
     shmemc_team_reset_psync(team_h, SHMEMC_PSYNC_COLLECTIVE);                  \
-    shmem_free(pWrk);                                                          \
     return success;                                                            \
   }
 
 /*
- * @brief Macro to define team-based sum_inscan operations
+ * @brief Macro to define a team-based sum_exscan public API entry point
+ *
+ * Generates the shcoll_<typename>_sum_exscan_<algo> function for one
+ * (_typename, _type, _algo) triple.  The generated function validates its
+ * arguments, translates the caller's team-local rank, delegates to the
+ * corresponding sum_exscan_helper, and resets the collective pSync slot
+ * before returning.
+ *
+ * @param _typename Stringified type name used in function-name mangling
+ * @param _type     C type of the scan elements
+ * @param _algo     Algorithm suffix (linear, ring, logarithmic, or rec_dbl)
  */
 #define SHCOLL_SUM_EXSCAN_DEFINITION(_typename, _type, _algo)                  \
   int shcoll_##_typename##_sum_exscan_##_algo(                                 \
@@ -458,23 +580,34 @@ SHMEM_SCAN_ARITH_TYPE_TABLE(DECLARE_SUM_EXSCAN_HELPER)
     shmemc_team_h team_h = (shmemc_team_h)team;                                \
     SHMEMU_CHECK_NULL(shmemc_team_get_psync(team_h, SHMEMC_PSYNC_COLLECTIVE),  \
                      "team_h->pSyncs[COLLECTIVE]");                            \
-    /* TODO: check that either same src & dest, or non-overlapping */          \
-    _type *pWrk =                                                              \
-        shmem_malloc(SHCOLL_REDUCE_MIN_WRKDATA_SIZE * sizeof(_type));          \
+    SHMEMU_CHECK_BUFFER_OVERLAP(dest, source,                                  \
+                      sizeof(_type) * nelems,sizeof(_type) * nelems);          \
+                                                                               \
     int me = shmemc_my_pe();                                                   \
     int me_as = shmemc_team_translate_pe(SHMEM_TEAM_WORLD, me, team);          \
                                                                                \
     int success = sum_exscan_helper_##_typename##_##_algo(                     \
         dest, source, nelems, me_as, team, team_h->start,                      \
         (team_h->stride > 0) ? (int)log2((double)team_h->stride) : 0,          \
-        team_h->nranks, pWrk,                                                  \
+        team_h->nranks,                                                        \
         shmemc_team_get_psync(team_h, SHMEMC_PSYNC_COLLECTIVE));               \
                                                                                \
     shmemc_team_reset_psync(team_h, SHMEMC_PSYNC_COLLECTIVE);                  \
-    shmem_free(pWrk);                                                          \
     return success;                                                            \
   }
 
+/*
+ * @brief Macro to emit all public sum_inscan and sum_exscan entry points for one type
+ *
+ * Expands SHCOLL_SUM_INSCAN_DEFINITION and SHCOLL_SUM_EXSCAN_DEFINITION for
+ * every algorithm variant (linear, ring, logarithmic, rec_dbl) for the given
+ * (_type, _typename) pair.  Passed as the callback to
+ * SHMEM_SCAN_ARITH_TYPE_TABLE so that the full API surface is instantiated for
+ * every supported arithmetic type in a single table expansion.
+ *
+ * @param _type     C type of the scan elements
+ * @param _typename Stringified type name used in function-name mangling
+ */
 #define X(_type, _typename)                                                    \
   SHCOLL_SUM_INSCAN_DEFINITION(_typename, _type, linear)                       \
   SHCOLL_SUM_INSCAN_DEFINITION(_typename, _type, ring)                         \
@@ -486,5 +619,3 @@ SHMEM_SCAN_ARITH_TYPE_TABLE(DECLARE_SUM_EXSCAN_HELPER)
   SHCOLL_SUM_EXSCAN_DEFINITION(_typename, _type, rec_dbl)
   SHMEM_SCAN_ARITH_TYPE_TABLE(X)
 #undef X
-
-
