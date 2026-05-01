@@ -116,20 +116,20 @@
   {#_algo, #_typename, shcoll_##_typename##_##_op##_reduce_##_algo}
 
 /*
- * @brief Macro to register a typed inscan collective 
+ * @brief Macro to register a typed sum_inscan collective 
  * @param _algo The algorithm implementation name
  * @param _typename The data type name
  */
-#define TYPED_INSCAN_REG(_algo, _typename)                                \
-  {#_algo, #_typename, shcoll_##_typename##_inscan_##_algo}
+#define TYPED_SUM_INSCAN_REG(_algo, _typename)                                \
+  {#_algo, #_typename, shcoll_##_typename##_sum_inscan_##_algo}
 
 /*
- * @brief Macro to register a typed exscan collective 
+ * @brief Macro to register a typed sum_exscan collective 
  * @param _algo The algorithm implementation name
  * @param _typename The data type name
  */
-#define TYPED_EXSCAN_REG(_algo, _typename)                                \
-  {#_algo, #_typename, shcoll_##_typename##_exscan_##_algo}
+#define TYPED_SUM_EXSCAN_REG(_algo, _typename)                                \
+  {#_algo, #_typename, shcoll_##_typename##_sum_exscan_##_algo}
 
 /******************************************************** */
 /**
@@ -549,24 +549,30 @@ static typed_op_t prod_reduce_tab[] = {
 #undef PROD_REDUCE_REG
 
 /**
- * @brief Table of inscan collective algorithms
+ * @brief Table of sum_inscan collective algorithms
  */
-#define INSCAN_REG(_type, _typename)                                      \
-  TYPED_INSCAN_REG(linear, _typename),
+#define SUM_INSCAN_REG(_type, _typename)                                      \
+  TYPED_SUM_INSCAN_REG(linear, _typename), \
+  TYPED_SUM_INSCAN_REG(ring, _typename), \
+  TYPED_SUM_INSCAN_REG(logarithmic, _typename), \
+  TYPED_SUM_INSCAN_REG(recursive_doubling, _typename),
 
-static typed_op_t inscan_tab[] = {
-    SHMEM_REDUCE_ARITH_TYPE_TABLE(INSCAN_REG) TYPED_LAST};
-#undef INSCAN_REG
+static typed_op_t sum_inscan_tab[] = {
+    SHMEM_REDUCE_ARITH_TYPE_TABLE(SUM_INSCAN_REG) TYPED_LAST};
+#undef SUM_INSCAN_REG
 
 /**
- * @brief Table of exscan collective algorithms
+ * @brief Table of sum_exscan collective algorithms
  */
-#define EXSCAN_REG(_type, _typename)                                      \
-  TYPED_EXSCAN_REG(linear, _typename),
+#define SUM_EXSCAN_REG(_type, _typename)                                      \
+  TYPED_SUM_EXSCAN_REG(linear, _typename), \
+  TYPED_SUM_EXSCAN_REG(ring, _typename), \
+  TYPED_SUM_EXSCAN_REG(logarithmic, _typename), \
+  TYPED_SUM_EXSCAN_REG(recursive_doubling, _typename),
 
-static typed_op_t exscan_tab[] = {
-    SHMEM_REDUCE_ARITH_TYPE_TABLE(EXSCAN_REG) TYPED_LAST};
-#undef EXSCAN_REG
+static typed_op_t sum_exscan_tab[] = {
+    SHMEM_REDUCE_ARITH_TYPE_TABLE(SUM_EXSCAN_REG) TYPED_LAST};
+#undef SUM_EXSCAN_REG
 
 /**
  * @brief Table of barrier_all collective algorithms
@@ -861,8 +867,8 @@ REGISTER_TYPED(min_reduce)
 REGISTER_TYPED(sum_reduce)
 REGISTER_TYPED(prod_reduce)
 
-REGISTER_TYPED(inscan)
-REGISTER_TYPED(exscan)
+REGISTER_TYPED(sum_inscan)
+REGISTER_TYPED(sum_exscan)
 
 REGISTER_UNSIZED(barrier_all)
 REGISTER_UNSIZED(sync)

@@ -78,9 +78,9 @@ typedef struct collectives {
   char *sum_reduce;  /**< Team sum reduction */
   char *prod_reduce; /**< Team product reduction */
 
-  /* inscan and exscan algorithms */
-  char *inscan;
-  char *exscan;
+  /* sum_inscan and sum_exscan algorithms */
+  char *sum_inscan;
+  char *sum_exscan;
 
   char *barrier; /**< Barrier operation */
 } shmemc_coll_t;

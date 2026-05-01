@@ -119,8 +119,8 @@ typedef struct coll_ops {
   typed_op_t sum_reduce;  /**< Typed SUM reduce operation */
   typed_op_t prod_reduce; /**< Typed PROD reduce operation */
 
-  typed_op_t inscan; /**< Typed inscan operation */
-  typed_op_t exscan; /**< Typed exscan operation */
+  typed_op_t sum_inscan; /**< Typed sum_inscan operation */
+  typed_op_t sum_exscan; /**< Typed sum_exscan operation */
 
   unsized_op_t barrier_all; /**< Typed global barrier operation */
   unsized_op_t sync;        /**< Synchronization operation */
@@ -180,7 +180,7 @@ int register_min_reduce(const char *op);
 int register_sum_reduce(const char *op);
 int register_prod_reduce(const char *op);
 
-int register_inscan(const char *op);
-int register_exscan(const char *op);
+int register_sum_inscan(const char *op);
+int register_sum_exscan(const char *op);
 
 #endif

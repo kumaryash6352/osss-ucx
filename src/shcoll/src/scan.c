@@ -1,6 +1,6 @@
 /*
  * @file inscan.c
- * @brief Implementation of collective inscan operation
+ * @brief Implementation of collective sum_inscan operation
  *
  */
 
@@ -18,17 +18,17 @@
 
 
 /*
-   @brief Helper macro to define linear inscan operations
- * essentially the naive implementation of the inscan collective
+   @brief Helper macro to define linear sum_inscan operations
+ * essentially the naive implementation of the sum_inscan collective
  *
- * Implements a linear inscan algorithm where each PE gets and adds its required
+ * Implements a linear sum_inscan algorithm where each PE gets and adds its required
  * information
  *
- * @param _name Typename of inscan operation
+ * @param _name Typename of sum_inscan operation
  * @param _type Data type to operate on
  */
-#define INSCAN_HELPER_LINEAR(_name, _type)                                     \
-  int inscan_helper_##_name##_linear(                                          \
+#define SUM_INSCAN_HELPER_LINEAR(_name, _type)                                     \
+  int sum_inscan_helper_##_name##_linear(                                          \
     _type *dest, const _type *source, int nelems, int me_as, shmem_team_t team,\
     int PE_start, int logPE_stride, int PE_size, _type *pWrk, long *pSync) {   \
   _type * workBuffer = (_type *)shmem_calloc(nelems, sizeof(_type));           \
@@ -74,8 +74,8 @@
 }
 
 /* Implement the ring algorithm here */                                        
-#define INSCAN_HELPER_RING(_name, _type)                                       \
-  int inscan_helper_##_name##_linear(                                          \
+#define SUM_INSCAN_HELPER_RING(_name, _type)                                       \
+  int sum_inscan_helper_##_name##_ring(                                            \
     _type *dest, const _type *source, int nelems, int me_as, shmem_team_t team,\
     int PE_start, int logPE_stride, int PE_size, _type *pWrk, long *pSync) {   \
   _type * workBuffer;                                                          \
@@ -98,7 +98,7 @@
                                                                                \
   shcoll_barrier_binomial_tree(PE_start, logPE_stride, PE_size, pSync);        \
                                                                                \
-  /* do shmem_inscan */                                                        \
+  /* do shmem_sum_inscan */                                                        \
   /* wait on results and take sum (except for first PE) */                     \
   if (me_as != 0){                                                             \
     shmem_wait_until(received, 1, SHMEM_CMP_EQ);                               \
@@ -121,8 +121,8 @@
 }
 
 /* based off of Hillis and Steele's algorithm  */
-#define INSCAN_HELPER_LOGARITHMIC(_name, _type)                                \
-  int inscan_helper_##_name##_linear(                                          \
+#define SUM_INSCAN_HELPER_LOGARITHMIC(_name, _type)                                \
+  int sum_inscan_helper_##_name##_logarithmic(                                     \
     _type *dest, const _type *source, int nelems, int me_as, shmem_team_t team,\
     int PE_start, int logPE_stride, int PE_size, _type *pWrk, long *pSync) {   \
   _type * workBuffer = (_type *)shmem_malloc(nelems * sizeof(_type));          \
@@ -153,8 +153,8 @@
   return 0;                                                                    \
 }
 
-#define INSCAN_HELPER_RECURSIVE_DOUBLING(_name, _type)                                \
-  int inscan_helper_##_name##_linear(                                          \
+#define SUM_INSCAN_HELPER_RECURSIVE_DOUBLING(_name, _type)                         \
+  int sum_inscan_helper_##_name##_recursive_doubling(                              \
     _type *dest, const _type *source, int nelems, int me_as, shmem_team_t team,\
     int PE_start, int logPE_stride, int PE_size, _type *pWrk, long *pSync) {   \
   _type * partialResBuf = (_type *) shmem_malloc(nelems * sizeof(_type));     \
@@ -193,23 +193,26 @@
   return 0;                                                                    \
 }
 
-#define DECLARE_INSCAN_HELPER(_type, _typename)                               \
-  INSCAN_HELPER_LINEAR(_typename, _type)
+#define DECLARE_SUM_INSCAN_HELPER(_type, _typename)                               \
+  SUM_INSCAN_HELPER_LINEAR(_typename, _type) \
+  SUM_INSCAN_HELPER_RING(_typename, _type) \
+  SUM_INSCAN_HELPER_LOGARITHMIC(_typename, _type) \
+  SUM_INSCAN_HELPER_RECURSIVE_DOUBLING(_typename, _type)
 
-SHMEM_REDUCE_ARITH_TYPE_TABLE(DECLARE_INSCAN_HELPER)
-#undef DECLARE_INSCAN_HELPER
+SHMEM_REDUCE_ARITH_TYPE_TABLE(DECLARE_SUM_INSCAN_HELPER)
+#undef DECLARE_SUM_INSCAN_HELPER
 
 /*
-   @brief Helper macro to define linear exscan operations
+   @brief Helper macro to define linear sum_exscan operations
  *
- * Implements a linear exscan algorithm where each PE gets and adds its required
+ * Implements a linear sum_exscan algorithm where each PE gets and adds its required
  * information
  *
- * @param _name Typename of exscan operation
+ * @param _name Typename of sum_exscan operation
  * @param _type Data type to operate on
  */
-#define EXSCAN_HELPER_LINEAR(_name, _type)                                     \
-  int exscan_helper_##_name##_linear(                                          \
+#define SUM_EXSCAN_HELPER_LINEAR(_name, _type)                                     \
+  int sum_exscan_helper_##_name##_linear(                                          \
     _type *dest, const _type *source, int nelems, int me_as, shmem_team_t team,\
     int PE_start, int logPE_stride, int PE_size, _type *pWrk, long *pSync) {   \
   _type * workBuffer = (_type *)shmem_calloc(nelems, sizeof(_type));           \
@@ -254,18 +257,169 @@ SHMEM_REDUCE_ARITH_TYPE_TABLE(DECLARE_INSCAN_HELPER)
   return 0;                                                                    \
 }
 
+/* Implement the ring algorithm here */                                        
+#define SUM_EXSCAN_HELPER_RING(_name, _type)                                       \
+  int sum_exscan_helper_##_name##_ring(                                          \
+    _type *dest, const _type *source, int nelems, int me_as, shmem_team_t team,\
+    int PE_start, int logPE_stride, int PE_size, _type *pWrk, long *pSync) {   \
+  _type * workBuffer;                                                          \
+  if ((void *) dest == (void *) source){                                       \
+    workBuffer = (_type *)shmem_malloc(nelems * sizeof(_type));                \
+    if (workBuffer == NULL)                                                    \
+      return 1;                                                                \
+  } else {                                                                     \
+    /* if different src / dst arrays, save memory and use dest */              \
+    /* as our work buffer */                                                   \
+    workBuffer = dest;                                                         \
+  }                                                                            \
+  uint64_t * received = shmem_calloc(1,sizeof(uint64_t));                      \
+  if (received == NULL){                                                       \
+    if ((void *) dest == (void *) source) shmem_free(workBuffer);              \
+    return 1;                                                                  \
+  }                                                                            \
+  if (me_as == 0 && dest != source)                                            \
+    memcpy(dest, source, nelems * sizeof(_type));                              \
+                                                                               \
+  shcoll_barrier_binomial_tree(PE_start, logPE_stride, PE_size, pSync);        \
+                                                                               \
+  /* do shmem_sum_inscan */                                                        \
+  /* wait on results and take sum (except for first PE) */                     \
+  if (me_as != 0){                                                             \
+    shmem_wait_until(received, 1, SHMEM_CMP_EQ);                               \
+    for (size_t i = 0; i < nelems; i ++)                                       \
+      dest[i] = workBuffer[i] + source[i];                                     \
+  }                                                                            \
+  if (me_as != PE_size - 1){                                                   \
+    /* put results to next PE in line (except for last PE) */                  \
+    int dest_pe = shmemc_team_pe_to_world(team, me_as + 1);                    \
+    shmem_put8_signal(workBuffer, dest, nelems * sizeof(_type), received, 1,   \
+        SHMEM_SIGNAL_SET, dest_pe);                                            \
+  }                                                                            \
+                                                                               \
+  shcoll_barrier_binomial_tree(PE_start, logPE_stride, PE_size, pSync);        \
+                                                                               \
+  /* shift phase for sum_exscan */                                                 \
+  _type * shiftBuf = (_type *)shmem_malloc(nelems * sizeof(_type));            \
+  if (shiftBuf != NULL) {                                                      \
+    if (me_as > 0) {                                                           \
+      int target = shmemc_team_pe_to_world(team, me_as - 1);                   \
+      shmem_getmem(shiftBuf, dest, nelems * sizeof(_type), target);            \
+    }                                                                          \
+    shcoll_barrier_binomial_tree(PE_start, logPE_stride, PE_size, pSync);      \
+    if (me_as > 0) {                                                           \
+      memcpy(dest, shiftBuf, nelems * sizeof(_type));                          \
+    } else {                                                                   \
+      memset(dest, 0, nelems * sizeof(_type));                                 \
+    }                                                                          \
+    shmem_free(shiftBuf);                                                      \
+  }                                                                            \
+                                                                               \
+  if ((void *) dest == (void *) source)                                        \
+    shmem_free(workBuffer);                                                    \
+  shmem_free(received);                                                        \
+  return (shiftBuf == NULL) ? 1 : 0;                                           \
+}
 
-#define DECLARE_EXSCAN_HELPER(_type, _typename)                               \
-  EXSCAN_HELPER_LINEAR(_typename, _type)
+#define SUM_EXSCAN_HELPER_LOGARITHMIC(_name, _type)                                \
+  int sum_exscan_helper_##_name##_logarithmic(                                          \
+    _type *dest, const _type *source, int nelems, int me_as, shmem_team_t team,\
+    int PE_start, int logPE_stride, int PE_size, _type *pWrk, long *pSync) {   \
+  _type * workBuffer = (_type *)shmem_malloc(nelems * sizeof(_type));          \
+  if (workBuffer == NULL)                                                      \
+    return 1;                                                                  \
+  if ( (void *) source != (void *) dest){                                      \
+    memcpy(dest, source, nelems * sizeof(_type));                              \
+  }                                                                            \
+                                                                               \
+  shcoll_barrier_binomial_tree(PE_start, logPE_stride, PE_size, pSync);        \
+  for (int stride = 1; stride <= PE_size; stride <<= 1){                       \
+    if (me_as >= stride){                                                      \
+      int target = shmemc_team_pe_to_world(team, me_as - stride);              \
+      shmem_getmem(workBuffer, dest, nelems * sizeof(_type), target);          \
+    }                                                                          \
+    shcoll_barrier_binomial_tree(PE_start, logPE_stride, PE_size, pSync);      \
+    if (me_as >= stride){                                                      \
+      for (int elem = 0; elem < nelems; elem ++){                              \
+        dest[elem] += workBuffer[elem];                                        \
+      }                                                                        \
+    }                                                                          \
+    shcoll_barrier_binomial_tree(PE_start, logPE_stride, PE_size, pSync);      \
+  }                                                                            \
+                                                                               \
+  /* shift phase for sum_exscan */                                                 \
+  _type * shiftBuf = (_type *)shmem_malloc(nelems * sizeof(_type));            \
+  if (shiftBuf != NULL) {                                                      \
+    if (me_as > 0) {                                                           \
+      int target = shmemc_team_pe_to_world(team, me_as - 1);                   \
+      shmem_getmem(shiftBuf, dest, nelems * sizeof(_type), target);            \
+    }                                                                          \
+    shcoll_barrier_binomial_tree(PE_start, logPE_stride, PE_size, pSync);      \
+    if (me_as > 0) {                                                           \
+      memcpy(dest, shiftBuf, nelems * sizeof(_type));                          \
+    } else {                                                                   \
+      memset(dest, 0, nelems * sizeof(_type));                                 \
+    }                                                                          \
+    shmem_free(shiftBuf);                                                      \
+  }                                                                            \
+                                                                               \
+  shmem_free(workBuffer);                                                      \
+  return (shiftBuf == NULL) ? 1 : 0;                                           \
+}
 
-SHMEM_REDUCE_ARITH_TYPE_TABLE(DECLARE_EXSCAN_HELPER)
-#undef DECLARE_EXSCAN_HELPER
+#define SUM_EXSCAN_HELPER_RECURSIVE_DOUBLING(_name, _type)                                \
+  int sum_exscan_helper_##_name##_recursive_doubling(                                          \
+    _type *dest, const _type *source, int nelems, int me_as, shmem_team_t team,\
+    int PE_start, int logPE_stride, int PE_size, _type *pWrk, long *pSync) {   \
+  _type * partialResBuf = (_type *) shmem_malloc(nelems * sizeof(_type));     \
+  if (partialResBuf == NULL)                                                   \
+    return 1;                                                                  \
+  _type * recvBuf = (_type *) shmem_malloc(nelems * sizeof(_type));           \
+  if (recvBuf == NULL){                                                        \
+    shmem_free(partialResBuf);                                                 \
+    return 1;                                                                  \
+  }                                                                            \
+  memcpy(partialResBuf, source, nelems * sizeof(_type)); \
+  memset(dest, 0, nelems * sizeof(_type)); \
+  shcoll_barrier_binomial_tree(PE_start, logPE_stride, PE_size, pSync);        \
+                                                                               \
+  for (int stride = 1; stride < PE_size; stride <<= 1){                        \
+    int target = stride ^ me_as;                                               \
+    if (target < PE_size){                                                     \
+      int world_target = shmemc_team_pe_to_world(team, target);                \
+      shmem_getmem(recvBuf, partialResBuf, nelems * sizeof(_type),             \
+          world_target);                                                       \
+      shcoll_barrier_binomial_tree(PE_start, logPE_stride, PE_size, pSync);    \
+      if (me_as > target){                                                     \
+        for (size_t i = 0; i < nelems; i ++)                                   \
+          partialResBuf[i] = partialResBuf[i] + recvBuf[i];                    \
+        for (size_t i = 0; i < nelems; i ++)                                   \
+          dest[i] = dest[i] + recvBuf[i];                    \
+      } else {                                                                 \
+        for (size_t i = 0; i < nelems; i ++)                                   \
+          partialResBuf[i] = partialResBuf[i] + recvBuf[i];                    \
+      }                                                                        \
+    }                                                                          \
+    shcoll_barrier_binomial_tree(PE_start, logPE_stride, PE_size, pSync);      \
+  }                                                                            \
+  shmem_free(partialResBuf);                                                   \
+  shmem_free(recvBuf);                                                         \
+  return 0;                                                                    \
+}
+
+#define DECLARE_SUM_EXSCAN_HELPER(_type, _typename)                               \
+  SUM_EXSCAN_HELPER_LINEAR(_typename, _type) \
+  SUM_EXSCAN_HELPER_RING(_typename, _type) \
+  SUM_EXSCAN_HELPER_LOGARITHMIC(_typename, _type) \
+  SUM_EXSCAN_HELPER_RECURSIVE_DOUBLING(_typename, _type)
+
+SHMEM_REDUCE_ARITH_TYPE_TABLE(DECLARE_SUM_EXSCAN_HELPER)
+#undef DECLARE_SUM_EXSCAN_HELPER
 
 /*
- * @brief Macro to define team-based inscan operations
+ * @brief Macro to define team-based sum_inscan operations
  */
-#define SHCOLL_INSCAN_DEFINITION(_typename, _type, _algo)                      \
-  int shcoll_##_typename##_inscan_##_algo(                                     \
+#define SHCOLL_SUM_INSCAN_DEFINITION(_typename, _type, _algo)                      \
+  int shcoll_##_typename##_sum_inscan_##_algo(                                     \
       shmem_team_t team, _type *dest, const _type *source, size_t nelems) {    \
     SHMEMU_CHECK_INIT();                                                       \
     SHMEMU_CHECK_TEAM_VALID(team);                                             \
@@ -280,7 +434,7 @@ SHMEM_REDUCE_ARITH_TYPE_TABLE(DECLARE_EXSCAN_HELPER)
     int me = shmemc_my_pe();                                                   \
     int me_as = shmemc_team_translate_pe(SHMEM_TEAM_WORLD, me, team);          \
                                                                                \
-    int success = inscan_helper_##_typename##_##_algo(                         \
+    int success = sum_inscan_helper_##_typename##_##_algo(                         \
         dest, source, nelems, me_as, team, team_h->start,                      \
         (team_h->stride > 0) ? (int)log2((double)team_h->stride) : 0,          \
         team_h->nranks, pWrk,                                                  \
@@ -292,10 +446,10 @@ SHMEM_REDUCE_ARITH_TYPE_TABLE(DECLARE_EXSCAN_HELPER)
   }
 
 /*
- * @brief Macro to define team-based inscan operations
+ * @brief Macro to define team-based sum_inscan operations
  */
-#define SHCOLL_EXSCAN_DEFINITION(_typename, _type, _algo)                      \
-  int shcoll_##_typename##_exscan_##_algo(                                     \
+#define SHCOLL_SUM_EXSCAN_DEFINITION(_typename, _type, _algo)                      \
+  int shcoll_##_typename##_sum_exscan_##_algo(                                     \
       shmem_team_t team, _type *dest, const _type *source, size_t nelems) {    \
     SHMEMU_CHECK_INIT();                                                       \
     SHMEMU_CHECK_TEAM_VALID(team);                                             \
@@ -310,7 +464,7 @@ SHMEM_REDUCE_ARITH_TYPE_TABLE(DECLARE_EXSCAN_HELPER)
     int me = shmemc_my_pe();                                                   \
     int me_as = shmemc_team_translate_pe(SHMEM_TEAM_WORLD, me, team);          \
                                                                                \
-    int success = exscan_helper_##_typename##_##_algo(                         \
+    int success = sum_exscan_helper_##_typename##_##_algo(                         \
         dest, source, nelems, me_as, team, team_h->start,                      \
         (team_h->stride > 0) ? (int)log2((double)team_h->stride) : 0,          \
         team_h->nranks, pWrk,                                                  \
@@ -322,8 +476,14 @@ SHMEM_REDUCE_ARITH_TYPE_TABLE(DECLARE_EXSCAN_HELPER)
   }
 
 #define X(_type, _typename)                                       \
-  SHCOLL_INSCAN_DEFINITION(_typename, _type, linear)              \
-  SHCOLL_EXSCAN_DEFINITION(_typename, _type, linear)
+  SHCOLL_SUM_INSCAN_DEFINITION(_typename, _type, linear)              \
+  SHCOLL_SUM_INSCAN_DEFINITION(_typename, _type, ring)              \
+  SHCOLL_SUM_INSCAN_DEFINITION(_typename, _type, logarithmic)              \
+  SHCOLL_SUM_INSCAN_DEFINITION(_typename, _type, recursive_doubling)              \
+  SHCOLL_SUM_EXSCAN_DEFINITION(_typename, _type, linear)  \
+  SHCOLL_SUM_EXSCAN_DEFINITION(_typename, _type, ring) \
+  SHCOLL_SUM_EXSCAN_DEFINITION(_typename, _type, logarithmic) \
+  SHCOLL_SUM_EXSCAN_DEFINITION(_typename, _type, recursive_doubling)
   SHMEM_REDUCE_ARITH_TYPE_TABLE(X)
 #undef X
 

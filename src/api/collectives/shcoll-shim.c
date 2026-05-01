@@ -132,8 +132,8 @@ void collectives_init(void) {
   TRY(sum_reduce);
   TRY(prod_reduce);
 
-  TRY(inscan);
-  TRY(exscan);
+  TRY(sum_inscan);
+  TRY(sum_exscan);
 }
 
 /**
@@ -1435,23 +1435,23 @@ SHMEM_REDUCE_ARITH_TYPE_TABLE(DECL_SHIM_PROD_REDUCE)
 #endif /* ENABLE_PSHMEM */
 
 /**
- * @brief Declares a inscan operation for a given type
+ * @brief Declares a sum_inscan operation for a given type
  *
  * @param _typename The type name
  * @param _type The type
  */
-#define SHMEM_TYPENAME_INSCAN(_typename, _type)                                \
-  int shmem_##_typename##_inscan(                                              \
+#define SHMEM_TYPENAME_SUM_INSCAN(_typename, _type)                                \
+  int shmem_##_typename##_sum_inscan(                                              \
       shmem_team_t team, _type *dest, const _type *source, size_t nelems) {    \
     logger(LOG_COLLECTIVES, "%s(%p, %p, %p, %zu)", __func__, team, dest,       \
            source, nelems);                                                    \
-    TYPED_CALL(inscan, #_typename, team, dest, source, nelems);                \
+    TYPED_CALL(sum_inscan, #_typename, team, dest, source, nelems);                \
   }
 
-#define DECL_SHIM_INSCAN(_typename, _type)                                     \
-  SHMEM_TYPENAME_INSCAN(_type, _typename)
-SHMEM_REDUCE_ARITH_TYPE_TABLE(DECL_SHIM_INSCAN)
-#undef DECL_SHIM_INSCAN
+#define DECL_SHIM_SUM_INSCAN(_typename, _type)                                     \
+  SHMEM_TYPENAME_SUM_INSCAN(_type, _typename)
+SHMEM_REDUCE_ARITH_TYPE_TABLE(DECL_SHIM_SUM_INSCAN)
+#undef DECL_SHIM_SUM_INSCAN
 
 #ifdef ENABLE_PSHMEM
 #pragma weak shmem_char_exscan = pshmem_char_exscan
@@ -1509,23 +1509,23 @@ SHMEM_REDUCE_ARITH_TYPE_TABLE(DECL_SHIM_INSCAN)
 #endif /* ENABLE_PSHMEM */
 
 /**
- * @brief Declares a exscan operation for a given type
+ * @brief Declares a sum_exscan operation for a given type
  *
  * @param _typename The type name
  * @param _type The type
  */
-#define SHMEM_TYPENAME_EXSCAN(_typename, _type)                                \
-  int shmem_##_typename##_exscan(                                              \
+#define SHMEM_TYPENAME_SUM_EXSCAN(_typename, _type)                                \
+  int shmem_##_typename##_sum_exscan(                                              \
       shmem_team_t team, _type *dest, const _type *source, size_t nelems) {    \
     logger(LOG_COLLECTIVES, "%s(%p, %p, %p, %zu)", __func__, team, dest,       \
            source, nelems);                                                    \
-    TYPED_CALL(exscan, #_typename, team, dest, source, nelems);                \
+    TYPED_CALL(sum_exscan, #_typename, team, dest, source, nelems);                \
   }
 
-#define DECL_SHIM_EXSCAN(_typename, _type)                                     \
-  SHMEM_TYPENAME_EXSCAN(_type, _typename)
-SHMEM_REDUCE_ARITH_TYPE_TABLE(DECL_SHIM_EXSCAN)
-#undef DECL_SHIM_EXSCAN
+#define DECL_SHIM_SUM_EXSCAN(_typename, _type)                                     \
+  SHMEM_TYPENAME_SUM_EXSCAN(_type, _typename)
+SHMEM_REDUCE_ARITH_TYPE_TABLE(DECL_SHIM_SUM_EXSCAN)
+#undef DECL_SHIM_SUM_EXSCAN
 
 /** @} */
 
