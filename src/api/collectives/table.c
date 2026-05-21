@@ -115,6 +115,22 @@
 #define TYPED_REDUCE_REG(_op, _algo, _typename)                                \
   {#_algo, #_typename, shcoll_##_typename##_##_op##_reduce_##_algo}
 
+/*
+ * @brief Macro to register a typed sum_inscan collective 
+ * @param _algo The algorithm implementation name
+ * @param _typename The data type name
+ */
+#define TYPED_SUM_INSCAN_REG(_algo, _typename)                                \
+  {#_algo, #_typename, shcoll_##_typename##_sum_inscan_##_algo}
+
+/*
+ * @brief Macro to register a typed sum_exscan collective 
+ * @param _algo The algorithm implementation name
+ * @param _typename The data type name
+ */
+#define TYPED_SUM_EXSCAN_REG(_algo, _typename)                                \
+  {#_algo, #_typename, shcoll_##_typename##_sum_exscan_##_algo}
+
 /******************************************************** */
 /**
  * @brief Table of alltoall collective algorithms for all types
@@ -533,6 +549,32 @@ static typed_op_t prod_reduce_tab[] = {
 #undef PROD_REDUCE_REG
 
 /**
+ * @brief Table of sum_inscan collective algorithms
+ */
+#define SUM_INSCAN_REG(_type, _typename)                                      \
+  TYPED_SUM_INSCAN_REG(linear, _typename), \
+  TYPED_SUM_INSCAN_REG(ring, _typename), \
+  TYPED_SUM_INSCAN_REG(logarithmic, _typename), \
+  TYPED_SUM_INSCAN_REG(rec_dbl, _typename),
+
+static typed_op_t sum_inscan_tab[] = {
+    SHMEM_SCAN_ARITH_TYPE_TABLE(SUM_INSCAN_REG) TYPED_LAST};
+#undef SUM_INSCAN_REG
+
+/**
+ * @brief Table of sum_exscan collective algorithms
+ */
+#define SUM_EXSCAN_REG(_type, _typename)                                      \
+  TYPED_SUM_EXSCAN_REG(linear, _typename), \
+  TYPED_SUM_EXSCAN_REG(ring, _typename), \
+  TYPED_SUM_EXSCAN_REG(logarithmic, _typename), \
+  TYPED_SUM_EXSCAN_REG(rec_dbl, _typename),
+
+static typed_op_t sum_exscan_tab[] = {
+    SHMEM_SCAN_ARITH_TYPE_TABLE(SUM_EXSCAN_REG) TYPED_LAST};
+#undef SUM_EXSCAN_REG
+
+/**
  * @brief Table of barrier_all collective algorithms
  */
 static unsized_op_t barrier_all_tab[] = {
@@ -824,6 +866,9 @@ REGISTER_TYPED(max_reduce)
 REGISTER_TYPED(min_reduce)
 REGISTER_TYPED(sum_reduce)
 REGISTER_TYPED(prod_reduce)
+
+REGISTER_TYPED(sum_inscan)
+REGISTER_TYPED(sum_exscan)
 
 REGISTER_UNSIZED(barrier_all)
 REGISTER_UNSIZED(sync)

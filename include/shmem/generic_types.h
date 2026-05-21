@@ -286,6 +286,33 @@
   X(float _Complex, complexf)
 
 /*
+ * Team-based sum scan operations (Table 10)
+ *
+ * User by:
+ * - shmem_sum_inscan()
+ * - shmem_sum_exscan()
+ * NOTE: Only canonical C types are included below to avoid _Generic
+ * duplicate/compatible type errors.
+ */
+#define C11_SHMEM_SCAN_ARITH_TYPE_TABLE(X)                                     \
+  X(char, char)                                                                \
+  X(signed char, schar)                                                        \
+  X(short, short)                                                              \
+  X(int, int)                                                                  \
+  X(long, long)                                                                \
+  X(long long, longlong)                                                       \
+  X(unsigned char, uchar)                                                      \
+  X(unsigned short, ushort)                                                    \
+  X(unsigned int, uint)                                                        \
+  X(unsigned long, ulong)                                                      \
+  X(unsigned long long, ulonglong)                                             \
+  X(float, float)                                                              \
+  X(double, double)                                                            \
+  X(long double, longdouble)                                                   \
+  X(double _Complex, complexd)                                                 \
+  X(float _Complex, complexf)
+
+/*
  * Pt2pt synchronization types. While specification states
  * these should be the standard AMO types, we support several
  * depreciated ones, so we keep them in a separate table.

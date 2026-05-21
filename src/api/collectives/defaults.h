@@ -42,6 +42,12 @@
 /** Default algorithm for reduction operations */
 #define COLLECTIVES_DEFAULT_REDUCTIONS "rec_dbl"
 
+/** Default algorithm for inscan operations */
+#define COLLECTIVES_DEFAULT_INSCAN "rec_dbl"
+
+/** Default algorithm for exscan operations */
+#define COLLECTIVES_DEFAULT_EXSCAN "rec_dbl"
+
 /** Default algorithm for and-to-all reductions */
 #define COLLECTIVES_DEFAULT_AND_TO_ALL COLLECTIVES_DEFAULT_REDUCTIONS
 
