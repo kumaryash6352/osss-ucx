@@ -91,10 +91,18 @@ inline static void shmem_generics_nomatch(void *dummy, ...) {}
   SHMEM_RMA_GENERIC_CASE(iput, type, typename)
 #define SHMEM_CTX_RMA_GENERIC_CASE_iput(type, typename)                        \
   SHMEM_CTX_RMA_GENERIC_CASE(iput, type, typename)
+#define SHMEM_RMA_GENERIC_CASE_ibput(type, typename)                            \
+  SHMEM_RMA_GENERIC_CASE(ibput, type, typename)
+#define SHMEM_CTX_RMA_GENERIC_CASE_ibput(type, typename)                        \
+  SHMEM_CTX_RMA_GENERIC_CASE(ibput, type, typename)
 #define SHMEM_RMA_GENERIC_CASE_iget(type, typename)                            \
   SHMEM_RMA_GENERIC_CASE(iget, type, typename)
 #define SHMEM_CTX_RMA_GENERIC_CASE_iget(type, typename)                        \
   SHMEM_CTX_RMA_GENERIC_CASE(iget, type, typename)
+#define SHMEM_RMA_GENERIC_CASE_ibget(type, typename)                            \
+  SHMEM_RMA_GENERIC_CASE(ibget, type, typename)
+#define SHMEM_CTX_RMA_GENERIC_CASE_ibget(type, typename)                        \
+  SHMEM_CTX_RMA_GENERIC_CASE(ibget, type, typename)
 #define SHMEM_RMA_GENERIC_CASE_put_nbi(type, typename)                         \
   SHMEM_RMA_GENERIC_CASE(put_nbi, type, typename)
 #define SHMEM_CTX_RMA_GENERIC_CASE_put_nbi(type, typename)                     \
@@ -167,6 +175,17 @@ inline static void shmem_generics_nomatch(void *dummy, ...) {}
           SHMEM_RMA_GENERIC_CASE_iput) default: shmem_generics_nomatch)(         \
       __VA_ARGS__)
 
+#define shmem_ibput(...)                                                         \
+  _Generic(                                                                      \
+      SHC11_TYPE_EVAL_PTR(SHC11_GET_ARG1(__VA_ARGS__)),                          \
+      shmem_ctx_t: _Generic(                                                     \
+          SHC11_TYPE_EVAL_PTR_OR_SCALAR(SHC11_GET_ARG2(__VA_ARGS__)),            \
+          C11_SHMEM_STANDARD_RMA_TYPE_TABLE(                                     \
+              SHMEM_CTX_RMA_GENERIC_CASE_ibput) default: shmem_generics_nomatch),\
+      C11_SHMEM_STANDARD_RMA_TYPE_TABLE(                                         \
+          SHMEM_RMA_GENERIC_CASE_ibput) default: shmem_generics_nomatch)(         \
+      __VA_ARGS__)
+
 #define shmem_iget(...)                                                          \
   _Generic(                                                                      \
       SHC11_TYPE_EVAL_PTR(SHC11_GET_ARG1(__VA_ARGS__)),                          \
@@ -176,6 +195,17 @@ inline static void shmem_generics_nomatch(void *dummy, ...) {}
               SHMEM_CTX_RMA_GENERIC_CASE_iget) default: shmem_generics_nomatch), \
       C11_SHMEM_STANDARD_RMA_TYPE_TABLE(                                         \
           SHMEM_RMA_GENERIC_CASE_iget) default: shmem_generics_nomatch)(         \
+      __VA_ARGS__)
+
+#define shmem_ibget(...)                                                         \
+  _Generic(                                                                      \
+      SHC11_TYPE_EVAL_PTR(SHC11_GET_ARG1(__VA_ARGS__)),                          \
+      shmem_ctx_t: _Generic(                                                     \
+          SHC11_TYPE_EVAL_PTR_OR_SCALAR(SHC11_GET_ARG2(__VA_ARGS__)),            \
+          C11_SHMEM_STANDARD_RMA_TYPE_TABLE(                                     \
+              SHMEM_CTX_RMA_GENERIC_CASE_ibget) default: shmem_generics_nomatch),\
+      C11_SHMEM_STANDARD_RMA_TYPE_TABLE(                                         \
+          SHMEM_RMA_GENERIC_CASE_ibget) default: shmem_generics_nomatch)(        \
       __VA_ARGS__)
 
 #define shmem_put_nbi(...)                                                          \
