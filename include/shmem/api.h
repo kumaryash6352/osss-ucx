@@ -382,6 +382,9 @@ void shmem_pcontrol(const int level, ...);
   void shmem_ctx_##_typename##_i##_opname(                                     \
       shmem_ctx_t ctx, _type *dest, const _type *src, ptrdiff_t tst,           \
       ptrdiff_t sst, size_t nelems, int pe);                                   \
+  void shmem_ctx_##_typename##_ib##_opname(                                    \
+      shmem_ctx_t ctx, _type *dest, const _type *src, ptrdiff_t tst,           \
+      ptrdiff_t sst, size_t bsize, size_t nblocks, int pe);                    \
   void shmem_ctx_##_typename##_##_opname##_nbi(                                \
       shmem_ctx_t ctx, _type *dest, const _type *src, size_t nelems, int pe);
 
@@ -426,6 +429,9 @@ SHMEM_STANDARD_RMA_TYPE_TABLE(DECL_CTX_GET)
   void shmem_##_typename##_i##_opname(_type *dest, const _type *src,           \
                                       ptrdiff_t tst, ptrdiff_t sst,            \
                                       size_t nelems, int pe);                  \
+  void shmem_##_typename##_ib##_opname(_type *dest, const _type *src,          \
+                                      ptrdiff_t tst, ptrdiff_t sst,            \
+                                      size_t bsize, size_t nblocks, int pe);   \
   void shmem_##_typename##_##_opname##_nbi(_type *dest, const _type *src,      \
                                            size_t nelems, int pe);
 
@@ -471,6 +477,10 @@ SHMEM_STANDARD_RMA_TYPE_TABLE(DECL_GET)
   void shmem_ctx_i##_opname##_size(shmem_ctx_t ctx, void *dest,                \
                                    const void *src, ptrdiff_t tst,             \
                                    ptrdiff_t sst, size_t nelems, int pe);      \
+  void shmem_ctx_ib##_opname##_size(shmem_ctx_t ctx, void *dest,               \
+                                   const void *src, ptrdiff_t tst,             \
+                                   ptrdiff_t sst, size_t bsize, size_t nblocks,\
+                                   int pe);                                    \
   void shmem_ctx_##_opname##_size##_nbi(                                       \
       shmem_ctx_t ctx, void *dest, const void *src, size_t nelems, int pe);
 
@@ -517,6 +527,9 @@ API_DECL_CTX_PUTGET_SIZE(get, 128)
                               int pe);                                         \
   void shmem_i##_opname##_size(void *dest, const void *src, ptrdiff_t tst,     \
                                ptrdiff_t sst, size_t nelems, int pe);          \
+  void shmem_ib##_opname##_size(void *dest, const void *src, ptrdiff_t tst,    \
+                               ptrdiff_t sst, size_t bsize,                    \
+                               size_t nblocks, int pe);                        \
   void shmem_##_opname##_size##_nbi(void *dest, const void *src,               \
                                     size_t nelems, int pe);
 
@@ -1019,6 +1032,109 @@ API_DECL_PUTMEM_SIGNAL()
  *
  */
 uint64_t shmem_signal_fetch(const uint64_t *sig_addr);
+
+
+////////////////////////////////////////////////////////////////////////////////
+/**
+ * @brief sets value of the signal object.
+ * @page shmem_ctx_signal_set
+ * @section Synopsis
+ *
+ * @subsection c C/C++
+ @code
+ void shmem_ctx_signal_set(shmem_ctx_t ctx, const uint64_t *sig_addr,
+      uint64_t signal, int pe) {
+ @endcode
+ *
+ * @param[in] ctx Context on which to execute operation
+ * @param[in] sig_addr The address of the remotely accessible signal object
+ * @param[in] signal New value for signal
+ * @param[in] pe Processing element to set signal
+ *
+ * @section Effect
+ * None.
+ *
+ * @section Return
+ * None.
+ *
+ */
+void shmem_ctx_signal_set(shmem_ctx_t ctx, const uint64_t *sig_addr,
+      uint64_t signal, int pe);
+  
+////////////////////////////////////////////////////////////////////////////////
+/**
+ * @brief sets value of the signal object.
+ * @page shmem_signal_set
+ * @section Synopsis
+ *
+ * @subsection c C/C++
+ @code
+ void shmem_signal_set(const uint64_t *sig_addr, uint64_t signal, int pe);
+ @endcode
+ *
+ * @param[in] sig_addr The address of the remotely accessible signal object
+ * @param[in] signal New value for signal
+ * @param[in] pe Processing element to set signal
+ *
+ * @section Effect
+ * None.
+ *
+ * @section Return
+ * None.
+ *
+ */
+void shmem_signal_set(const uint64_t *sig_addr, uint64_t signal, int pe);
+
+////////////////////////////////////////////////////////////////////////////////
+/**
+ * @brief adds value to the signal object.
+ * @page shmem_ctx_signal_add
+ * @section Synopsis
+ *
+ * @subsection c C/C++
+ @code
+ void shmem_ctx_signal_add(shmem_ctx_t ctx, const uint64_t *sig_addr,
+      uint64_t signal, int pe) {
+ @endcode
+ *
+ * @param[in] ctx Context on which to execute operation
+ * @param[in] sig_addr The address of the remotely accessible signal object
+ * @param[in] signal Value to add to signal
+ * @param[in] pe Processing element to add to
+ *
+ * @section Effect
+ * None.
+ *
+ * @section Return
+ * None.
+ *
+ */
+void shmem_ctx_signal_add(shmem_ctx_t ctx, const uint64_t *sig_addr,
+      uint64_t signal, int pe);
+  
+////////////////////////////////////////////////////////////////////////////////
+/**
+ * @brief adds value of the signal object.
+ * @page shmem_signal_add
+ * @section Synopsis
+ *
+ * @subsection c C/C++
+ @code
+ void shmem_signal_add(const uint64_t *sig_addr, uint64_t signal, int pe);
+ @endcode
+ *
+ * @param[in] sig_addr The address of the remotely accessible signal object
+ * @param[in] signal New value for signal
+ * @param[in] pe Processing element to add signal
+ *
+ * @section Effect
+ * None.
+ *
+ * @section Return
+ * None.
+ *
+ */
+void shmem_signal_add(const uint64_t *sig_addr, uint64_t signal, int pe);
 
 ////////////////////////////////////////////////////////////////////////////////
 /**
