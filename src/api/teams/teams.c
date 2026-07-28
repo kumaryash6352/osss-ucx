@@ -260,33 +260,19 @@ int shmem_ctx_get_team(shmem_ctx_t ctx, shmem_team_t *team) {
  * returned.
  */
 void *shmem_team_ptr(shmem_team_t team, const void *dest, int pe) {
-  /* If team equals SHMEM_TEAM_INVALID, return NULL */
+  void *rw;
+
+  SHMEMU_CHECK_INIT();
+
+  /* a null pointer is returned for the invalid team */
   if (team == SHMEM_TEAM_INVALID) {
-    return NULL;
+    rw = NULL;
+  } else {
+    rw = shmemc_team_ptr((shmemc_team_h)team, dest, pe);
   }
 
-  /* If team equals SHMEM_TEAM_WORLD, behavior is identical to shmem_ptr */
-  if (team == SHMEM_TEAM_WORLD) {
-    return shmemc_ctx_ptr(SHMEM_CTX_DEFAULT, dest, pe);
-  }
+  logger(LOG_MEMORY, "%s(team=%p, dest=%p, pe=%d) -> %p", __func__,
+         (void *)team, dest, pe, rw);
 
-  /* Otherwise, validate team and translate PE */
-  shmemc_team_h th = (shmemc_team_h)team;
-  if (th == NULL) {
-    return NULL;
-  }
-
-  /* Validate PE range */
-  if (pe < 0 || pe >= th->nranks) {
-    return NULL;
-  }
-
-  /* Translate team-relative PE to global PE */
-  int global_pe = shmemc_team_translate_pe(th, pe, &shmemc_team_world);
-  if (global_pe < 0) {
-    return NULL;
-  }
-
-  /* Get the pointer using the global PE */
-  return shmemc_ctx_ptr(SHMEM_CTX_DEFAULT, dest, global_pe);
+  return rw;
 }
