@@ -315,6 +315,8 @@ void shmemc_ctx_session_start(shmemc_context_h ch, long options,
     ch->session.is_active = true;
     ch->session.options = options;
     ch->session.config.total_ops = SIZE_MAX;
+    ch->session.has_pending = false;
+    ch->session.coalesce.len = 0;
   } else {
     ch->session.options |= options;
   }
@@ -322,6 +324,16 @@ void shmemc_ctx_session_start(shmemc_context_h ch, long options,
   if (config != NULL) {
     if (config_mask & SHMEM_CTX_SESSION_TOTAL_OPS) {
       ch->session.config.total_ops = config->total_ops;
+#ifdef ENABLE_SESSION_PREALLOC
+      /* Pre-warm and pre-allocate connections for this session */
+      if (ch->eps != NULL) {
+        for (int p = 0; p < proc.li.nranks; ++p) {
+          if (ch->eps[p] != NULL) {
+            (void)ch->eps[p];
+          }
+        }
+      }
+#endif
     }
   }
 
@@ -342,9 +354,22 @@ void shmemc_ctx_session_stop(shmemc_context_h ch) {
 
   if (ch->session.is_active) {
     logger(LOG_CONTEXTS, "session stopped on context #%lu", ch->id);
+
+    /* Flush any pending coalesced RMA writes */
+    shmemc_ctx_session_coalesce_flush(ch);
+
+#ifdef ENABLE_SESSION_DEFERRED_FLUSH
+    if (ch->session.has_pending) {
+      shmemc_ctx_quiet((shmem_ctx_t)ch);
+      ch->session.has_pending = false;
+    }
+#endif
+
     ch->session.is_active = false;
     ch->session.options = 0;
     ch->session.config.total_ops = SIZE_MAX;
+    ch->session.has_pending = false;
+    ch->session.coalesce.len = 0;
   }
 }
 
