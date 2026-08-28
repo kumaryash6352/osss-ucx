@@ -142,6 +142,15 @@ typedef struct shmemc_context_attr {
 } shmemc_context_attr_t;
 
 /**
+ * @brief Communication session tracking state
+ */
+typedef struct shmemc_session {
+  bool is_active;
+  long options;
+  shmem_ctx_session_config_t config;
+} shmemc_session_t;
+
+/**
  * @brief Structure representing an OpenSHMEM context
  */
 typedef struct shmemc_context {
@@ -157,6 +166,8 @@ typedef struct shmemc_context {
   mem_region_access_t *racc; /* for endpoint remote access */
 
   shmemc_team_h team; /* team we belong to */
+
+  shmemc_session_t session; /* active session info and hints */
 
   /*
    * possibly other things

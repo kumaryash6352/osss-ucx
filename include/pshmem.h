@@ -1741,6 +1741,23 @@ int pshmem_ctx_create(long options, shmem_ctx_t *ctxp) _WUR;
  */
 void pshmem_ctx_destroy(shmem_ctx_t ctx);
 
+/**
+ * @brief Start a communication session on a context
+ * @param ctx Context handle
+ * @param options Session hint options
+ * @param config Pointer to session configuration parameters
+ * @param config_mask Bitwise mask of configuration parameters
+ */
+void pshmem_ctx_session_start(shmem_ctx_t ctx, long options,
+                              const shmem_ctx_session_config_t *config,
+                              long config_mask);
+
+/**
+ * @brief Stop a communication session on a context
+ * @param ctx Context handle
+ */
+void pshmem_ctx_session_stop(shmem_ctx_t ctx);
+
 /*
  * Signal operations
  */
@@ -2349,15 +2366,6 @@ void pshmem_double_set(double *target, double value, int pe);
 #endif /* __STDC_VERSION__ defined test */
 
 /*
- * --end--
- */
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
-
-#endif /* _PSHMEM_H */
-/*
  * Context-aware operations
  */
 
@@ -2595,5 +2603,9 @@ void pshmem_ctx_longlong_set(shmem_ctx_t ctx, long long *target,
 void pshmem_ctx_float_set(shmem_ctx_t ctx, float *target, float value, int pe);
 void pshmem_ctx_double_set(shmem_ctx_t ctx, double *target, double value,
                            int pe);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* _PSHMEM_H */

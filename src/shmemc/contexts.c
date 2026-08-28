@@ -248,6 +248,11 @@ int shmemc_context_create(shmemc_team_h th, long options,
   ch->id = idx;
   ch->team = th; /* connect context to its owning team */
 
+  /* Initialize session state */
+  ch->session.is_active = false;
+  ch->session.options = 0;
+  ch->session.config.total_ops = SIZE_MAX;
+
   context_register(ch);
 
   *ctxp = ch;
@@ -292,6 +297,58 @@ size_t shmemc_context_id(shmem_ctx_t ctx) {
 }
 
 /**
+ * @brief Start a communication session on a context
+ *
+ * @param ch Context handle
+ * @param options Session hint options
+ * @param config Session configuration pointer
+ * @param config_mask Configuration parameter mask
+ */
+void shmemc_ctx_session_start(shmemc_context_h ch, long options,
+                              const shmem_ctx_session_config_t *config,
+                              long config_mask) {
+  if (ch == NULL) {
+    return;
+  }
+
+  if (!ch->session.is_active) {
+    ch->session.is_active = true;
+    ch->session.options = options;
+    ch->session.config.total_ops = SIZE_MAX;
+  } else {
+    ch->session.options |= options;
+  }
+
+  if (config != NULL) {
+    if (config_mask & SHMEM_CTX_SESSION_TOTAL_OPS) {
+      ch->session.config.total_ops = config->total_ops;
+    }
+  }
+
+  logger(LOG_CONTEXTS,
+         "session started on context #%lu: options=%#lx, total_ops=%zu",
+         ch->id, ch->session.options, ch->session.config.total_ops);
+}
+
+/**
+ * @brief Stop a communication session on a context
+ *
+ * @param ch Context handle
+ */
+void shmemc_ctx_session_stop(shmemc_context_h ch) {
+  if (ch == NULL) {
+    return;
+  }
+
+  if (ch->session.is_active) {
+    logger(LOG_CONTEXTS, "session stopped on context #%lu", ch->id);
+    ch->session.is_active = false;
+    ch->session.options = 0;
+    ch->session.config.total_ops = SIZE_MAX;
+  }
+}
+
+/**
  * @brief Default context instance and handle
  *
  * The first, default context gets a special SHMEM handle and needs
@@ -307,6 +364,10 @@ shmemc_context_h defcp = &shmemc_default_context;
  */
 int shmemc_context_init_default(void) {
   context_set_options(0L, defcp);
+
+  defcp->session.is_active = false;
+  defcp->session.options = 0;
+  defcp->session.config.total_ops = SIZE_MAX;
 
   shmemc_ucx_context_progress(defcp);
 
