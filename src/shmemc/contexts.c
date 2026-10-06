@@ -81,7 +81,7 @@ inline static shmemc_context_h *resize_spill_block(shmemc_team_h th, size_t n) {
  * @return Newly allocated context handle
  */
 inline static shmemc_context_h alloc_freelist_slot(void) {
-  shmemc_context_h ch = (shmemc_context_h)malloc(sizeof(shmemc_context_t));
+  shmemc_context_h ch = (shmemc_context_h)calloc(1, sizeof(shmemc_context_t));
 
   if (ch == NULL) {
     shmemu_fatal("unable to allocate memory for new context");
@@ -252,6 +252,7 @@ int shmemc_context_create(shmemc_team_h th, long options,
   ch->session.is_active = false;
   ch->session.options = 0;
   ch->session.config.total_ops = SIZE_MAX;
+  ch->session.coalesce.len = 0;
 
   context_register(ch);
 
@@ -315,7 +316,6 @@ void shmemc_ctx_session_start(shmemc_context_h ch, long options,
     ch->session.is_active = true;
     ch->session.options = options;
     ch->session.config.total_ops = SIZE_MAX;
-    ch->session.has_pending = false;
     ch->session.coalesce.len = 0;
   } else {
     ch->session.options |= options;
@@ -324,22 +324,12 @@ void shmemc_ctx_session_start(shmemc_context_h ch, long options,
   if (config != NULL) {
     if (config_mask & SHMEM_CTX_SESSION_TOTAL_OPS) {
       ch->session.config.total_ops = config->total_ops;
-#ifdef ENABLE_SESSION_PREALLOC
-      /* Pre-warm and pre-allocate connections for this session */
-      if (ch->eps != NULL) {
-        for (int p = 0; p < proc.li.nranks; ++p) {
-          if (ch->eps[p] != NULL) {
-            (void)ch->eps[p];
-          }
-        }
-      }
-#endif
     }
   }
 
   logger(LOG_CONTEXTS,
-         "session started on context #%lu: options=%#lx, total_ops=%zu",
-         ch->id, ch->session.options, ch->session.config.total_ops);
+         "session started on context #%lu: options=%#lx, total_ops=%zu", ch->id,
+         ch->session.options, ch->session.config.total_ops);
 }
 
 /**
@@ -358,17 +348,9 @@ void shmemc_ctx_session_stop(shmemc_context_h ch) {
     /* Flush any pending coalesced RMA writes */
     shmemc_ctx_session_coalesce_flush(ch);
 
-#ifdef ENABLE_SESSION_DEFERRED_FLUSH
-    if (ch->session.has_pending) {
-      shmemc_ctx_quiet((shmem_ctx_t)ch);
-      ch->session.has_pending = false;
-    }
-#endif
-
     ch->session.is_active = false;
     ch->session.options = 0;
     ch->session.config.total_ops = SIZE_MAX;
-    ch->session.has_pending = false;
     ch->session.coalesce.len = 0;
   }
 }
@@ -393,6 +375,7 @@ int shmemc_context_init_default(void) {
   defcp->session.is_active = false;
   defcp->session.options = 0;
   defcp->session.config.total_ops = SIZE_MAX;
+  defcp->session.coalesce.len = 0;
 
   shmemc_ucx_context_progress(defcp);
 

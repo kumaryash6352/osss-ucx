@@ -1770,6 +1770,28 @@ void pshmem_ctx_session_stop(shmem_ctx_t ctx);
 uint64_t pshmem_signal_fetch(const uint64_t *sig_addr) _WUR;
 
 /**
+ * @brief Atomically set a signal value on default context
+ */
+void pshmem_signal_set(uint64_t *sig_addr, uint64_t signal, int pe);
+
+/**
+ * @brief Atomically set a signal value on a context
+ */
+void pshmem_ctx_signal_set(shmem_ctx_t ctx, uint64_t *sig_addr, uint64_t signal,
+                           int pe);
+
+/**
+ * @brief Atomically add to a signal value on default context
+ */
+void pshmem_signal_add(uint64_t *sig_addr, uint64_t signal, int pe);
+
+/**
+ * @brief Atomically add to a signal value on a context
+ */
+void pshmem_ctx_signal_add(shmem_ctx_t ctx, uint64_t *sig_addr, uint64_t signal,
+                           int pe);
+
+/**
  * @brief Wait for signal object to change value
  * @param sig_addr Address of the remotely accessible signal object
  * @param cmp Comparison operator (SHMEM_CMP_EQ, etc.)
@@ -2603,6 +2625,40 @@ void pshmem_ctx_longlong_set(shmem_ctx_t ctx, long long *target,
 void pshmem_ctx_float_set(shmem_ctx_t ctx, float *target, float value, int pe);
 void pshmem_ctx_double_set(shmem_ctx_t ctx, double *target, double value,
                            int pe);
+
+/* Scan operations */
+#define PSHMEM_DECL_SCAN_OP(_name, _type)                                      \
+  int pshmem_##_name##_sum_inscan(shmem_team_t team, _type *dest,             \
+                                  const _type *source, size_t nelems);         \
+  int pshmem_##_name##_sum_exscan(shmem_team_t team, _type *dest,             \
+                                  const _type *source, size_t nelems);
+
+PSHMEM_DECL_SCAN_OP(char, char)
+PSHMEM_DECL_SCAN_OP(schar, signed char)
+PSHMEM_DECL_SCAN_OP(short, short)
+PSHMEM_DECL_SCAN_OP(int, int)
+PSHMEM_DECL_SCAN_OP(long, long)
+PSHMEM_DECL_SCAN_OP(longlong, long long)
+PSHMEM_DECL_SCAN_OP(ptrdiff, ptrdiff_t)
+PSHMEM_DECL_SCAN_OP(uchar, unsigned char)
+PSHMEM_DECL_SCAN_OP(ushort, unsigned short)
+PSHMEM_DECL_SCAN_OP(uint, unsigned int)
+PSHMEM_DECL_SCAN_OP(ulong, unsigned long)
+PSHMEM_DECL_SCAN_OP(ulonglong, unsigned long long)
+PSHMEM_DECL_SCAN_OP(int8, int8_t)
+PSHMEM_DECL_SCAN_OP(int16, int16_t)
+PSHMEM_DECL_SCAN_OP(int32, int32_t)
+PSHMEM_DECL_SCAN_OP(int64, int64_t)
+PSHMEM_DECL_SCAN_OP(uint8, uint8_t)
+PSHMEM_DECL_SCAN_OP(uint16, uint16_t)
+PSHMEM_DECL_SCAN_OP(uint32, uint32_t)
+PSHMEM_DECL_SCAN_OP(uint64, uint64_t)
+PSHMEM_DECL_SCAN_OP(size, size_t)
+PSHMEM_DECL_SCAN_OP(float, float)
+PSHMEM_DECL_SCAN_OP(double, double)
+PSHMEM_DECL_SCAN_OP(longdouble, long double)
+PSHMEM_DECL_SCAN_OP(complexd, double _Complex)
+PSHMEM_DECL_SCAN_OP(complexf, float _Complex)
 
 #ifdef __cplusplus
 }

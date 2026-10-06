@@ -633,6 +633,7 @@ void shmemc_ctx_session_start(shmemc_context_h ch, long options,
                               const shmem_ctx_session_config_t *config,
                               long config_mask);
 void shmemc_ctx_session_stop(shmemc_context_h ch);
+void shmemc_ctx_session_coalesce_flush(shmemc_context_h ch);
 
 /*
  * Special handling for default context
