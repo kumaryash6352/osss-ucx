@@ -115,15 +115,15 @@ typedef struct shmemc_team {
                            NULL if predef */
 
   /* now need to add pSync arrays for collectives */
-#define SHMEMC_NUM_PSYNCS 2 /* For barrier/sync and other collectives */
+#define SHMEMC_NUM_PSYNCS 3 /* Barrier/sync, other collectives, and broadcast */
 
   // clang-format off
 /* Symbolic constants for pSync buffer indices */
 #define SHMEMC_PSYNC_BARRIER    0  /* team sync/barrier operations */
 #define SHMEMC_PSYNC_COLLECTIVE 1  /* for other collective operations */
+#define SHMEMC_PSYNC_BROADCAST  2  /* dedicated broadcast work array */
 
 /* Old symbolic constants for backward compatibility in switch statement */
-#define SHMEMC_PSYNC_BROADCAST  2  /* broadcast operations */
 #define SHMEMC_PSYNC_COLLECT    3  /* collect/fcollect operations */
 #define SHMEMC_PSYNC_ALLTOALL   4  /* alltoall/alltoalls operations */
 #define SHMEMC_PSYNC_REDUCE     5  /* reduction operations */
