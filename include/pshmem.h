@@ -9,7 +9,7 @@
 #define _PSHMEM_H 1
 
 #include "shmem.h"
-#include "api_types.h"
+#include <shmem/api_types.h>
 
 #include <stdint.h> /* uint*_t */
 
@@ -34,6 +34,12 @@ void pstart_pes(int npes);
 void pshmem_init(void);
 
 /**
+ * @brief Reports initialization status through the profiling interface.
+ * @param[out] initialized Nonzero while initialized, zero otherwise.
+ */
+void pshmem_query_initialized(int *initialized);
+
+/**
  * @brief Clean up the OpenSHMEM environment
  */
 void pshmem_finalize(void);
@@ -56,14 +62,13 @@ void pshmem_info_get_name(char *name);
  * @param req Requested thread support level
  * @param prov Provided thread support level
  */
-void pshmem_init_thread(int req, int *prov);
+int pshmem_init_thread(int req, int *prov);
 
 /**
  * @brief Query the thread support level
- * @param prov Current thread support level
- * @return 0 on success, non-zero otherwise
+ * @param[out] prov Current thread support level
  */
-int pshmem_query_thread(int *prov) _WUR;
+void pshmem_query_thread(int *prov);
 
 /**
  * @brief Terminate all PEs with an exit code
@@ -259,6 +264,53 @@ PSHMEM_DECL_PUTGET_SIZE(get, 64)
 PSHMEM_DECL_PUTGET_SIZE(get, 128)
 
 #undef PSHMEM_DECL_PUTGET_SIZE
+
+/**
+ * @brief Declares typed interleaved block transfers and their context forms.
+ * @param _type Element type.
+ * @param _name OpenSHMEM type name.
+ */
+#define PSHMEM_DECL_IB_TRANSFER(_type, _name)                                  \
+  void pshmem_##_name##_ibput(_type *dest, const _type *source, ptrdiff_t dst, \
+                              ptrdiff_t sst, size_t bsize, size_t nblocks,     \
+                              int pe);                                         \
+  void pshmem_##_name##_ibget(_type *dest, const _type *source, ptrdiff_t dst, \
+                              ptrdiff_t sst, size_t bsize, size_t nblocks,     \
+                              int pe);                                         \
+  void pshmem_ctx_##_name##_ibput(                                             \
+      shmem_ctx_t ctx, _type *dest, const _type *source, ptrdiff_t dst,        \
+      ptrdiff_t sst, size_t bsize, size_t nblocks, int pe);                    \
+  void pshmem_ctx_##_name##_ibget(                                             \
+      shmem_ctx_t ctx, _type *dest, const _type *source, ptrdiff_t dst,        \
+      ptrdiff_t sst, size_t bsize, size_t nblocks, int pe);
+
+SHMEM_STANDARD_RMA_TYPE_TABLE(PSHMEM_DECL_IB_TRANSFER)
+#undef PSHMEM_DECL_IB_TRANSFER
+
+/**
+ * @brief Declares sized interleaved block transfers and their context forms.
+ * @param _size Element size in bits.
+ */
+#define PSHMEM_DECL_IB_TRANSFER_SIZE(_size)                                    \
+  void pshmem_ibput##_size(void *dest, const void *source, ptrdiff_t dst,      \
+                           ptrdiff_t sst, size_t bsize, size_t nblocks,        \
+                           int pe);                                            \
+  void pshmem_ibget##_size(void *dest, const void *source, ptrdiff_t dst,      \
+                           ptrdiff_t sst, size_t bsize, size_t nblocks,        \
+                           int pe);                                            \
+  void pshmem_ctx_ibput##_size(                                                \
+      shmem_ctx_t ctx, void *dest, const void *source, ptrdiff_t dst,          \
+      ptrdiff_t sst, size_t bsize, size_t nblocks, int pe);                    \
+  void pshmem_ctx_ibget##_size(                                                \
+      shmem_ctx_t ctx, void *dest, const void *source, ptrdiff_t dst,          \
+      ptrdiff_t sst, size_t bsize, size_t nblocks, int pe);
+
+PSHMEM_DECL_IB_TRANSFER_SIZE(8)
+PSHMEM_DECL_IB_TRANSFER_SIZE(16)
+PSHMEM_DECL_IB_TRANSFER_SIZE(32)
+PSHMEM_DECL_IB_TRANSFER_SIZE(64)
+PSHMEM_DECL_IB_TRANSFER_SIZE(128)
+#undef PSHMEM_DECL_IB_TRANSFER_SIZE
 
 /**
  * @brief Put contiguous data to remote PE
@@ -904,6 +956,13 @@ void pshmem_sync_all(void);
 void pshmem_fence(void);
 void pshmem_quiet(void);
 
+/**
+ * @brief Completes communication to the listed PEs on the default context.
+ * @param target_pes Array of world PE numbers, ignored when npes is zero.
+ * @param npes Number of target PEs.
+ */
+void pshmem_pe_quiet(const int *target_pes, size_t npes);
+
 /*
  * accessibility
  */
@@ -945,6 +1004,34 @@ int pshmem_uint32_test(uint32_t *ivar, int cmp, uint32_t cmp_value);
 int pshmem_uint64_test(uint64_t *ivar, int cmp, uint64_t cmp_value);
 int pshmem_size_test(size_t *ivar, int cmp, size_t cmp_value);
 int pshmem_ptrdiff_test(ptrdiff_t *ivar, int cmp, ptrdiff_t cmp_value);
+
+/**
+ * @brief Declares profiling entry points for vector comparisons.
+ * @param _type Comparison element type.
+ * @param _name OpenSHMEM type name.
+ */
+#define PSHMEM_DECL_VECTOR_SYNC(_type, _name)                                  \
+  int pshmem_##_name##_test_all_vector(_type *ivars, size_t nelems,            \
+                                       const int *status, int cmp,             \
+                                       const _type *cmp_values);               \
+  size_t pshmem_##_name##_test_any_vector(_type *ivars, size_t nelems,         \
+                                          const int *status, int cmp,          \
+                                          const _type *cmp_values);            \
+  size_t pshmem_##_name##_test_some_vector(_type *ivars, size_t nelems,        \
+                                           size_t *indices, const int *status, \
+                                           int cmp, const _type *cmp_values);  \
+  void pshmem_##_name##_wait_until_all_vector(_type *ivars, size_t nelems,     \
+                                              const int *status, int cmp,      \
+                                              const _type *cmp_values);        \
+  size_t pshmem_##_name##_wait_until_any_vector(_type *ivars, size_t nelems,   \
+                                                const int *status, int cmp,    \
+                                                const _type *cmp_values);      \
+  size_t pshmem_##_name##_wait_until_some_vector(                              \
+      _type *ivars, size_t nelems, size_t *indices, const int *status,         \
+      int cmp, const _type *cmp_values);
+
+SHMEM_STANDARD_AMO_TYPE_TABLE(PSHMEM_DECL_VECTOR_SYNC)
+#undef PSHMEM_DECL_VECTOR_SYNC
 
 void pshmem_short_wait_until(short *ivar, int cmp, short cmp_value);
 void pshmem_int_wait_until(int *ivar, int cmp, int cmp_value);
@@ -2393,6 +2480,15 @@ void pshmem_double_set(double *target, double value, int pe);
 
 void pshmem_ctx_fence(shmem_ctx_t ctx);
 void pshmem_ctx_quiet(shmem_ctx_t ctx);
+
+/**
+ * @brief Completes communication to the listed PEs on a context.
+ * @param ctx Communication context.
+ * @param target_pes Array of team-relative PE numbers, ignored when npes is
+ * zero.
+ * @param npes Number of target PEs.
+ */
+void pshmem_ctx_pe_quiet(shmem_ctx_t ctx, const int *target_pes, size_t npes);
 void pshmem_ctx_putmem(shmem_ctx_t ctx, void *dest, const void *src,
                        size_t nelems, int pe);
 void pshmem_ctx_getmem(shmem_ctx_t ctx, void *dest, const void *src,

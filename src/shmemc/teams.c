@@ -67,8 +67,11 @@ static void shmemc_team_contexts_destroy(shmemc_team_h th) {
 
   for (c = 0; c < th->nctxts; ++c) {
     shmemc_ucx_teardown_context(th->ctxts[c]);
+    free(th->ctxts[c]);
   }
   free(th->ctxts);
+  th->ctxts = NULL;
+  th->nctxts = 0;
 }
 
 /**

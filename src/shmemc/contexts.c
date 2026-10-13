@@ -55,6 +55,17 @@ static size_t spill_block;
  */
 static size_t spill_ctxt = 0;
 
+/** @brief Discard context slot bookkeeping at the end of a generation. */
+void shmemc_contexts_finalize(void) {
+  if (fl != NULL) {
+    kl_destroy(freelist, fl);
+    fl = NULL;
+  }
+  get_usable_context = get_usable_context_boot;
+  spill_block = 0;
+  spill_ctxt = 0;
+}
+
 /**
  * @brief Resize the context array block
  *

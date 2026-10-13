@@ -207,8 +207,7 @@ int shmemc_global_address(uint64_t addr) { return lookup_region(addr) == 0; }
  */
 
 /*
- * fence and quiet only do something on storable contexts, but
- * currently, progress is on the default context
+ * completion and ordering on communication contexts
  */
 
 void shmemc_ctx_fence(shmem_ctx_t ctx) {
@@ -248,23 +247,21 @@ void shmemc_ctx_quiet(shmem_ctx_t ctx) {
     /* Flush any pending session coalesced operations first */
     shmemc_ctx_session_coalesce_flush(ch);
 
-    if (!ch->attr.nostore) {
-      ucs_status_t s;
+    /* NOSTORE relaxes application-store ordering, not completion of RMA. */
+    ucs_status_t s;
 
 #ifdef HAVE_UCP_WORKER_FLUSH_NBX
-      const ucp_request_param_t prm = {.op_attr_mask =
-                                           UCP_OP_ATTR_FIELD_CALLBACK,
-                                       .cb.send = noop_callbackx};
-      const ucs_status_ptr_t sp = ucp_worker_flush_nbx(ch->w, &prm);
+    const ucp_request_param_t prm = {.op_attr_mask = UCP_OP_ATTR_FIELD_CALLBACK,
+                                     .cb.send = noop_callbackx};
+    const ucs_status_ptr_t sp = ucp_worker_flush_nbx(ch->w, &prm);
 
-      s = check_wait_for_request(ch, sp);
+    s = check_wait_for_request(ch, sp);
 #else
-      s = ucp_worker_flush(ch->w);
+    s = ucp_worker_flush(ch->w);
 #endif /* HAVE_UCP_WORKER_FLUSH_NBX */
 
-      shmemu_assert(s == UCS_OK, MODULE ": %s() failed (status: %s)", __func__,
-                    ucs_status_string(s));
-    }
+    shmemu_assert(s == UCS_OK, MODULE ": %s() failed (status: %s)", __func__,
+                  ucs_status_string(s));
   }
 }
 
